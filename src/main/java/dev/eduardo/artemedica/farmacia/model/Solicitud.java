@@ -14,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -69,4 +70,7 @@ public class Solicitud {
 
     @OneToMany(mappedBy = "solicitud", cascade = CascadeType.ALL)
     private List<SolicitudDetalle> detalles;
+
+    @Version
+    private Long version;
 }
