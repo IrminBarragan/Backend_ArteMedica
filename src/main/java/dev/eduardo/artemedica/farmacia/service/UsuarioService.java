@@ -1,6 +1,5 @@
 package dev.eduardo.artemedica.farmacia.service;
 
-import dev.eduardo.artemedica.farmacia.dto.LoginResponseDTO;
 import dev.eduardo.artemedica.farmacia.dto.UsuarioRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.UsuarioResponseDTO;
 
@@ -12,5 +11,7 @@ public interface UsuarioService {
     UsuarioResponseDTO obtenerPorId(Long id);
     List<UsuarioResponseDTO> listarActivos();
     void desactivar(Long id);
-    LoginResponseDTO autenticar(String username, String password);
+
+    // Solo valida credenciales (lanza AutenticacionException si no coinciden); el JWT se genera en AuthController
+    void autenticar(String username, String password);
 }

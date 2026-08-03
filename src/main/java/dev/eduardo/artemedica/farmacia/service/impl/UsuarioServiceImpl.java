@@ -1,6 +1,5 @@
 package dev.eduardo.artemedica.farmacia.service.impl;
 
-import dev.eduardo.artemedica.farmacia.dto.LoginResponseDTO;
 import dev.eduardo.artemedica.farmacia.dto.UsuarioRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.UsuarioResponseDTO;
 import dev.eduardo.artemedica.farmacia.exception.AutenticacionException;
@@ -85,13 +84,12 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional(readOnly = true)
-    public LoginResponseDTO autenticar(String username, String password) {
+    public void autenticar(String username, String password) {
         Usuario usuario = usuarioRepository.findByUsernameAndActivoTrue(username)
                 .orElseThrow(() -> new AutenticacionException("Usuario o contraseña invalidos"));
         if (!passwordEncoder.matches(password, usuario.getPassword())) {
             throw new AutenticacionException("Usuario o contraseña invalidos");
         }
-        return new LoginResponseDTO(usuario.getUsername(), usuario.getRol(), usuario.getEmpleado().getId());
     }
 
     private Empleado obtenerEmpleado(Long empleadoId) {
