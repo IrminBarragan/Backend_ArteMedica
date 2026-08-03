@@ -267,6 +267,34 @@ public class SolicitudServiceImpl implements SolicitudService {
         });
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public SolicitudResponseDTO obtenerPorId(Long id) {
+        Solicitud solicitud = solicitudRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Solicitud no encontrada: " + id));
+        List<SolicitudDetalle> detalles = solicitudDetalleRepository.findBySolicitudId(id);
+        return toDto(solicitud, detalles);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SolicitudResponseDTO> listar(EstatusSolicitud estatus, Long medicoId) {
+        List<Solicitud> solicitudes;
+        if (estatus != null && medicoId != null) {
+            solicitudes = solicitudRepository.findByEstatusAndMedicoId(estatus, medicoId);
+        } else if (estatus != null) {
+            solicitudes = solicitudRepository.findByEstatus(estatus);
+        } else if (medicoId != null) {
+            solicitudes = solicitudRepository.findByMedicoId(medicoId);
+        } else {
+            solicitudes = solicitudRepository.findAll();
+        }
+
+        return solicitudes.stream()
+                .map(solicitud -> toDto(solicitud, solicitudDetalleRepository.findBySolicitudId(solicitud.getId())))
+                .toList();
+    }
+
     private boolean estaCompleto(SolicitudDetalle detalle) {
         int autorizada = detalle.getCantidadAutorizada() == null ? 0 : detalle.getCantidadAutorizada();
         int entregada = detalle.getCantidadEntregada() == null ? 0 : detalle.getCantidadEntregada();

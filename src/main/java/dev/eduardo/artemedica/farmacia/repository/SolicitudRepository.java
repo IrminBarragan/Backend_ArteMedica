@@ -16,6 +16,7 @@ import java.util.Optional;
 public interface SolicitudRepository extends JpaRepository<Solicitud, Long> {
     List<Solicitud> findByEstatus(EstatusSolicitud estatus);
     List<Solicitud> findByMedicoId(Long medicoId);
+    List<Solicitud> findByEstatusAndMedicoId(EstatusSolicitud estatus, Long medicoId);
     List<Solicitud> findByAreaId(Long areaId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

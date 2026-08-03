@@ -2,7 +2,9 @@ package dev.eduardo.artemedica.farmacia.service;
 
 import dev.eduardo.artemedica.farmacia.dto.SolicitudRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudResponseDTO;
+import dev.eduardo.artemedica.farmacia.model.enums.EstatusSolicitud;
 
+import java.util.List;
 import java.util.Map;
 
 public interface SolicitudService {
@@ -10,4 +12,8 @@ public interface SolicitudService {
     SolicitudResponseDTO aprobar(Long solicitudId, Map<Long, Integer> cantidadesAutorizadasPorProducto, Long farmaceuticoId);
     SolicitudResponseDTO rechazar(Long solicitudId, String motivo, Long farmaceuticoId);
     SolicitudResponseDTO dispensar(Long solicitudId, Long farmaceuticoId);
+    SolicitudResponseDTO obtenerPorId(Long id);
+
+    // medicoId no nulo restringe el resultado a las solicitudes de ese medico
+    List<SolicitudResponseDTO> listar(EstatusSolicitud estatus, Long medicoId);
 }
