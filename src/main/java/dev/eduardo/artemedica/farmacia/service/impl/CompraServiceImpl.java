@@ -27,9 +27,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class CompraServiceImpl implements CompraService {
@@ -137,6 +140,57 @@ public class CompraServiceImpl implements CompraService {
         return new CompraResponseDTO(
                 compra.getId(), proveedor.getId(), proveedor.getNombre(), compra.getNumeroFactura(),
                 compra.getFechaCompra(), usuario.getUsername(), total, detallesResponse, compra.getCreatedAt()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CompraResponseDTO obtenerPorId(Long id) {
+        Compra compra = compraRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Compra no encontrada: " + id));
+        return toDto(compra);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CompraResponseDTO> listar(Long proveedorId, LocalDate desde, LocalDate hasta) {
+        List<Compra> compras;
+        if (proveedorId != null) {
+            compras = compraRepository.findByProveedorId(proveedorId);
+        } else if (desde != null && hasta != null) {
+            compras = compraRepository.findByFechaCompraBetween(desde, hasta);
+        } else {
+            compras = compraRepository.findAll();
+        }
+        return compras.stream().map(this::toDto).toList();
+    }
+
+    private CompraResponseDTO toDto(Compra compra) {
+        List<CompraDetalle> detalles = compraDetalleRepository.findByCompraId(compra.getId());
+        Map<Long, MovimientoInventario> movimientoPorProducto = movimientoInventarioRepository
+                .findByOrigenTipoAndOrigenId(OrigenMovimiento.COMPRA, compra.getId())
+                .stream()
+                .collect(Collectors.toMap(m -> m.getProducto().getId(), m -> m, (a, b) -> a));
+
+        BigDecimal total = BigDecimal.ZERO;
+        List<CompraDetalleResponseDTO> detallesDto = new ArrayList<>();
+        for (CompraDetalle detalle : detalles) {
+            BigDecimal subtotal = detalle.getCostoUnitario().multiply(BigDecimal.valueOf(detalle.getCantidad()));
+            total = total.add(subtotal);
+
+            MovimientoInventario movimiento = movimientoPorProducto.get(detalle.getProducto().getId());
+            Lote lote = movimiento != null ? movimiento.getLote() : null;
+
+            detallesDto.add(new CompraDetalleResponseDTO(
+                    detalle.getProducto().getId(), detalle.getProducto().getNombre(), detalle.getCantidad(),
+                    detalle.getCostoUnitario(), subtotal,
+                    lote != null ? lote.getId() : null, lote != null ? lote.getNumeroLote() : null
+            ));
+        }
+
+        return new CompraResponseDTO(
+                compra.getId(), compra.getProveedor().getId(), compra.getProveedor().getNombre(), compra.getNumeroFactura(),
+                compra.getFechaCompra(), compra.getUsuarioRegistro().getUsername(), total, detallesDto, compra.getCreatedAt()
         );
     }
 }
