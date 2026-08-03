@@ -17,6 +17,8 @@ public interface LoteRepository extends JpaRepository<Lote, Long> {
 
     // Lectura normal, sin bloqueo, para consultas (ej. mostrar disponibilidad en pantalla)
     List<Lote> findByProductoIdAndActivoTrueAndExistenciaActualGreaterThan(Long productoId, Integer cantidad);
+    List<Lote> findByActivoTrue();
+    List<Lote> findByProductoIdAndActivoTrue(Long productoId);
 
     @Query("SELECT l FROM Lote l WHERE l.activo = true AND l.existenciaActual > 0 AND l.fechaCaducidad < CURRENT_DATE")
     List<Lote> findLotesVencidos();
