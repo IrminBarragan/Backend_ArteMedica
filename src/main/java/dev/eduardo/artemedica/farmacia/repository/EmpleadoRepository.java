@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface EmpleadoRepository extends JpaRepository<Empleado, Long> {
     List<Empleado> findByTipoAndActivoTrue(TipoEmpleado tipo);
+    List<Empleado> findByActivoTrue();
 }
