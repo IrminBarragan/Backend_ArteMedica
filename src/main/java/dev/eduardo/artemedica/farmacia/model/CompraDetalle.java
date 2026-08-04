@@ -38,6 +38,10 @@ public class CompraDetalle {
     @JoinColumn(name = "producto_id", nullable = false)
     private Producto producto;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lote_id")
+    private Lote lote;
+
     @Column(nullable = false)
     private Integer cantidad;
 

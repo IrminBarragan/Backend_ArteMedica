@@ -31,8 +31,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class CompraServiceImpl implements CompraService {
@@ -91,14 +89,6 @@ public class CompraServiceImpl implements CompraService {
             Producto producto = productoRepository.findById(detalleDto.productoId())
                     .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado: " + detalleDto.productoId()));
 
-            CompraDetalle detalle = CompraDetalle.builder()
-                    .compra(compra)
-                    .producto(producto)
-                    .cantidad(detalleDto.cantidad())
-                    .costoUnitario(detalleDto.costoUnitario())
-                    .build();
-            compraDetalleRepository.save(detalle);
-
             Lote lote = Lote.builder()
                     .numeroLote(detalleDto.numeroLote())
                     .producto(producto)
@@ -112,6 +102,15 @@ public class CompraServiceImpl implements CompraService {
                     .updatedAt(ahora)
                     .build();
             lote = loteRepository.save(lote);
+
+            CompraDetalle detalle = CompraDetalle.builder()
+                    .compra(compra)
+                    .producto(producto)
+                    .lote(lote)
+                    .cantidad(detalleDto.cantidad())
+                    .costoUnitario(detalleDto.costoUnitario())
+                    .build();
+            compraDetalleRepository.save(detalle);
 
             stockAjustador.actualizarStockConReintento(producto.getId(), detalleDto.cantidad(), MAX_INTENTOS_STOCK);
 
@@ -167,10 +166,6 @@ public class CompraServiceImpl implements CompraService {
 
     private CompraResponseDTO toDto(Compra compra) {
         List<CompraDetalle> detalles = compraDetalleRepository.findByCompraId(compra.getId());
-        Map<Long, MovimientoInventario> movimientoPorProducto = movimientoInventarioRepository
-                .findByOrigenTipoAndOrigenId(OrigenMovimiento.COMPRA, compra.getId())
-                .stream()
-                .collect(Collectors.toMap(m -> m.getProducto().getId(), m -> m, (a, b) -> a));
 
         BigDecimal total = BigDecimal.ZERO;
         List<CompraDetalleResponseDTO> detallesDto = new ArrayList<>();
@@ -178,8 +173,7 @@ public class CompraServiceImpl implements CompraService {
             BigDecimal subtotal = detalle.getCostoUnitario().multiply(BigDecimal.valueOf(detalle.getCantidad()));
             total = total.add(subtotal);
 
-            MovimientoInventario movimiento = movimientoPorProducto.get(detalle.getProducto().getId());
-            Lote lote = movimiento != null ? movimiento.getLote() : null;
+            Lote lote = detalle.getLote();
 
             detallesDto.add(new CompraDetalleResponseDTO(
                     detalle.getProducto().getId(), detalle.getProducto().getNombre(), detalle.getCantidad(),
