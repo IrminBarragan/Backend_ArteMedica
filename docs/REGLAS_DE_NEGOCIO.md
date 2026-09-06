@@ -52,7 +52,7 @@ El toggle vive en `ConfiguracionSistema`, bajo la clave `INVENTARIO_FEFO_HABILIT
 - `GET /api/configuracion/INVENTARIO_FEFO_HABILITADO` (ADMIN o FARMACEUTICO pueden leerlo)
 - `PUT /api/configuracion/INVENTARIO_FEFO_HABILITADO` (**solo ADMIN** puede cambiarlo)
 
-Implicación para el frontend: el toggle de "usar FEFO" en una pantalla de configuración solo debería mostrarse (o estar habilitado para editar) si el usuario autenticado tiene rol `ADMIN`; un `FARMACEUTICO` puede consultarlo pero el botón de guardar debería estar deshabilitado u oculto para ese rol. Si la clave no se ha creado todavía en la base de datos, el `GET` responde `404` — en la práctica esto no debería pasar porque el proyecto siembra esa fila por defecto (`valor = "true"`, es decir FEFO habilitado) al arrancar.
+Implicación para el frontend: el toggle de "usar FEFO" en una pantalla de configuración solo debería mostrarse (o estar habilitado para editar) si el usuario autenticado tiene rol `ADMIN`; un `FARMACEUTICO` puede consultarlo pero el botón de guardar debería estar deshabilitado u oculto para ese rol. Si la clave no se ha creado todavía en la base de datos, el `GET` responde `404` — en la práctica esto no debería pasar porque `DataSeeder` siembra esa fila por defecto (`valor = "true"`, es decir FEFO habilitado) en cada arranque si todavía no existe.
 
 ## `stockActual` es un valor calculado, no editable
 
