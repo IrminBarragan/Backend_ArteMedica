@@ -9,7 +9,9 @@ PENDIENTE
    │
    ├── PUT /api/solicitudes/{id}/aprobar   →  APROBADO
    │
-   └── PUT /api/solicitudes/{id}/rechazar  →  RECHAZADO   (estado terminal)
+   ├── PUT /api/solicitudes/{id}/rechazar  →  RECHAZADO   (estado terminal)
+   │
+   └── PUT /api/solicitudes/{id}/cancelar  →  CANCELADA   (estado terminal)
 
 APROBADO
    │
@@ -25,7 +27,8 @@ ENTREGADA_PARCIAL
 Reglas de transición (las valida el backend, no solo el frontend):
 - `aprobar` y `rechazar` **solo** funcionan si la solicitud está en `PENDIENTE`. Si se intenta sobre cualquier otro estatus, la API responde `409` (`EstadoInvalidoException`).
 - `dispensar` **solo** funciona si la solicitud está en `APROBADO` o `ENTREGADA_PARCIAL`. Sobre cualquier otro estatus responde `409`.
-- `RECHAZADO` y `ENTREGADA_COMPLETA` son estados terminales — no hay ningún endpoint que los haga transicionar de nuevo.
+- `cancelar` **solo** funciona si la solicitud está en `PENDIENTE`. Un `MEDICO` solo puede cancelar las solicitudes que él mismo creó (se comprueba contra el `empleadoId` del token, no contra el body); `ADMIN` y `FARMACEUTICO` pueden cancelar cualquiera. El motivo es opcional y se devuelve en `motivoCancelacion`.
+- `RECHAZADO`, `CANCELADA` y `ENTREGADA_COMPLETA` son estados terminales — no hay ningún endpoint que los haga transicionar de nuevo.
 - Implicación para el frontend: muestra el botón "Aprobar"/"Rechazar" solo cuando `estatus === "PENDIENTE"`, y el botón "Dispensar" solo cuando `estatus === "APROBADO"` o `"ENTREGADA_PARCIAL"`.
 
 `dispensar` puede fallar sin devolver error si simplemente no hay suficiente stock disponible en ese momento: la solicitud se queda en `ENTREGADA_PARCIAL` (o no cambia si no se entregó nada) y se puede reintentar más tarde llamando `dispensar` otra vez (típicamente después de registrar una nueva compra que reabastece el producto).
@@ -65,3 +68,36 @@ No existe ningún endpoint para editarlo directamente: `ProductoRequestDTO` (usa
 ## Los lotes nunca se crean ni editan manualmente
 
 `LoteController` (`/api/lotes`) es **solo lectura** — no expone `POST`, `PUT` ni `DELETE`. Un lote nuevo se genera automáticamente, uno por cada línea (`CompraDetalleRequestDTO`) de un `POST /api/compras`. Si el frontend necesita dar de alta inventario nuevo, el único camino es registrar una compra, nunca un formulario de "crear lote" directo.
+
+## Qué se puede autorizar al aprobar
+
+El mapa `cantidadesAutorizadasPorProducto` que recibe `PUT /api/solicitudes/{id}/aprobar` tiene que
+cubrir **exactamente** los productos de la solicitud. El backend rechaza con `400`:
+
+- que falte algún producto de la solicitud (antes se autorizaba en 0 en silencio),
+- que se mande un producto que no pertenece a esa solicitud,
+- una cantidad negativa,
+- una cantidad mayor a la que el médico solicitó.
+
+Aprobar **menos** de lo solicitado sí es válido: es el caso normal de autorización parcial.
+
+## Mermas, ajustes y baja de lotes
+
+`Producto.stockActual` y `Lote.existenciaActual` también cambian fuera del flujo de compras y
+solicitudes, siempre dejando la línea correspondiente en el kardex:
+
+| Operación | Endpoint | Rol | Efecto |
+|---|---|---|---|
+| Merma | `POST /api/movimientos/merma` | ADMIN, FARMACEUTICO | Baja unidades de un lote por caducidad, rotura o robo. Motivo obligatorio |
+| Ajuste | `POST /api/movimientos/ajuste` | solo ADMIN | Corrige existencias en más o en menos tras un conteo físico |
+| Baja de lote | `POST /api/lotes/{id}/baja` | ADMIN, FARMACEUTICO | Merma todo lo que le quede al lote y lo marca inactivo |
+
+La baja de lote **no** es un `DELETE`: no borra nada. Si solo marcara el lote como inactivo, sus
+unidades seguirían contando en `stockActual` y el stock quedaría inflado de forma permanente.
+
+## El kardex se consulta en `/api/movimientos`
+
+Todo movimiento de inventario queda registrado con lote, producto, cantidad, saldo resultante,
+usuario responsable y documento de origen. Se consulta por producto, por lote, los más recientes, o
+por documento de origen (`?origenTipo=COMPRA&origenId=12`) para la trazabilidad inversa: qué
+movimientos generó una compra o una solicitud concreta.

@@ -12,6 +12,14 @@ public interface SolicitudService {
     SolicitudResponseDTO aprobar(Long solicitudId, Map<Long, Integer> cantidadesAutorizadasPorProducto, Long farmaceuticoId);
     SolicitudResponseDTO rechazar(Long solicitudId, String motivo, Long farmaceuticoId);
     SolicitudResponseDTO dispensar(Long solicitudId, Long farmaceuticoId);
+    /**
+     * Retira una solicitud que todavia esta PENDIENTE.
+     *
+     * @param puedeCancelarAjenas true para ADMIN y FARMACEUTICO; un MEDICO solo puede
+     *                            cancelar las solicitudes que el mismo creo.
+     */
+    SolicitudResponseDTO cancelar(Long solicitudId, String motivo, Long empleadoId, boolean puedeCancelarAjenas);
+
     SolicitudResponseDTO obtenerPorId(Long id);
 
     // medicoId no nulo restringe el resultado a las solicitudes de ese medico

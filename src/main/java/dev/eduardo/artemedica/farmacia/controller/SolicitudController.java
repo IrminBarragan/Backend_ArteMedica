@@ -1,6 +1,7 @@
 package dev.eduardo.artemedica.farmacia.controller;
 
 import dev.eduardo.artemedica.farmacia.dto.AprobarSolicitudRequestDTO;
+import dev.eduardo.artemedica.farmacia.dto.CancelarSolicitudRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.RechazarSolicitudRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudResponseDTO;
@@ -67,6 +68,21 @@ public class SolicitudController {
                                                             @AuthenticationPrincipal UsuarioPrincipal principal) {
         SolicitudResponseDTO actualizada = solicitudService.dispensar(id, principal.getEmpleadoId());
         return ResponseEntity.ok(actualizada);
+    }
+
+    /**
+     * Retira una solicitud PENDIENTE. Un MEDICO solo puede cancelar las suyas; ADMIN y
+     * FARMACEUTICO pueden cancelar cualquiera. El dueno se comprueba en el servicio contra
+     * el empleadoId del token, nunca contra un dato del cuerpo de la peticion.
+     */
+    @PutMapping("/{id}/cancelar")
+    public ResponseEntity<SolicitudResponseDTO> cancelar(@PathVariable Long id,
+                                                           @RequestBody(required = false) CancelarSolicitudRequestDTO dto,
+                                                           @AuthenticationPrincipal UsuarioPrincipal principal) {
+        boolean puedeCancelarAjenas = principal.getRol() != Rol.MEDICO;
+        String motivo = dto != null ? dto.motivo() : null;
+        return ResponseEntity.ok(
+                solicitudService.cancelar(id, motivo, principal.getEmpleadoId(), puedeCancelarAjenas));
     }
 
     @GetMapping("/{id}")

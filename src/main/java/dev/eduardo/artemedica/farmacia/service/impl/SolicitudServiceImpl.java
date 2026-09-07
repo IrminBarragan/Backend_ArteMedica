@@ -6,6 +6,7 @@ import dev.eduardo.artemedica.farmacia.dto.SolicitudRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudResponseDTO;
 import dev.eduardo.artemedica.farmacia.exception.ConflictoConcurrenciaException;
 import dev.eduardo.artemedica.farmacia.exception.EstadoInvalidoException;
+import dev.eduardo.artemedica.farmacia.exception.ReglaNegocioException;
 import dev.eduardo.artemedica.farmacia.exception.ResourceNotFoundException;
 import dev.eduardo.artemedica.farmacia.exception.StockInsuficienteException;
 import dev.eduardo.artemedica.farmacia.model.Area;
@@ -39,9 +40,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.function.Supplier;
+
+import org.springframework.security.access.AccessDeniedException;
 
 @Service
 public class SolicitudServiceImpl implements SolicitudService {
@@ -128,10 +134,12 @@ public class SolicitudServiceImpl implements SolicitudService {
                     .orElseThrow(() -> new ResourceNotFoundException("Empleado (farmaceutico) no encontrado: " + farmaceuticoId));
 
             List<SolicitudDetalle> detalles = solicitudDetalleRepository.findBySolicitudId(solicitudId);
+            validarCantidadesAutorizadas(detalles, cantidadesAutorizadasPorProducto);
+
             LocalDate hoy = LocalDate.now();
             for (SolicitudDetalle detalle : detalles) {
                 Producto producto = detalle.getProducto();
-                int cantidadAutorizada = cantidadesAutorizadasPorProducto.getOrDefault(producto.getId(), 0);
+                int cantidadAutorizada = cantidadesAutorizadasPorProducto.get(producto.getId());
 
                 int disponible = loteRepository.findByProductoIdAndActivoTrueAndExistenciaActualGreaterThan(producto.getId(), 0)
                         .stream()
@@ -268,6 +276,71 @@ public class SolicitudServiceImpl implements SolicitudService {
     }
 
     @Override
+    @Transactional
+    public SolicitudResponseDTO cancelar(Long solicitudId, String motivo, Long empleadoId,
+                                          boolean puedeCancelarAjenas) {
+        return conLockManejado(() -> {
+            Solicitud solicitud = solicitudRepository.findByIdForUpdate(solicitudId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Solicitud no encontrada: " + solicitudId));
+
+            if (solicitud.getEstatus() != EstatusSolicitud.PENDIENTE) {
+                throw new EstadoInvalidoException("Solo se puede cancelar una solicitud en estatus PENDIENTE. "
+                        + "La solicitud " + solicitudId + " esta en " + solicitud.getEstatus() + ".");
+            }
+            // Un medico solo retira lo suyo; el dueno se toma de la solicitud, nunca del cuerpo
+            // de la peticion, para que nadie pueda cancelar la solicitud de otro medico.
+            if (!puedeCancelarAjenas && !solicitud.getMedico().getId().equals(empleadoId)) {
+                throw new AccessDeniedException("No puedes cancelar una solicitud que no creaste.");
+            }
+
+            solicitud.setEstatus(EstatusSolicitud.CANCELADA);
+            solicitud.setMotivoCancelacion(motivo);
+            Solicitud actualizada = solicitudRepository.save(solicitud);
+
+            return toDto(actualizada, solicitudDetalleRepository.findBySolicitudId(solicitudId));
+        });
+    }
+
+    /**
+     * El mapa de cantidades autorizadas debe cubrir exactamente los productos de la solicitud.
+     *
+     * Antes se usaba getOrDefault(id, 0): omitir un producto lo autorizaba en cero en silencio,
+     * y no habia nada que impidiera autorizar mas unidades de las que el medico pidio.
+     */
+    private void validarCantidadesAutorizadas(List<SolicitudDetalle> detalles,
+                                               Map<Long, Integer> cantidadesAutorizadasPorProducto) {
+        Set<Long> productosDeLaSolicitud = detalles.stream()
+                .map(d -> d.getProducto().getId())
+                .collect(Collectors.toSet());
+
+        Set<Long> productosAjenos = new HashSet<>(cantidadesAutorizadasPorProducto.keySet());
+        productosAjenos.removeAll(productosDeLaSolicitud);
+        if (!productosAjenos.isEmpty()) {
+            throw new ReglaNegocioException("Los productos " + productosAjenos
+                    + " no forman parte de esta solicitud.");
+        }
+
+        for (SolicitudDetalle detalle : detalles) {
+            Long productoId = detalle.getProducto().getId();
+            Integer autorizada = cantidadesAutorizadasPorProducto.get(productoId);
+
+            if (autorizada == null) {
+                throw new ReglaNegocioException("Falta indicar la cantidad autorizada para el producto "
+                        + detalle.getProducto().getNombre() + " (id " + productoId + ").");
+            }
+            if (autorizada < 0) {
+                throw new ReglaNegocioException("La cantidad autorizada para "
+                        + detalle.getProducto().getNombre() + " no puede ser negativa.");
+            }
+            if (autorizada > detalle.getCantidadSolicitada()) {
+                throw new ReglaNegocioException("No se pueden autorizar " + autorizada + " unidades de "
+                        + detalle.getProducto().getNombre() + ": el medico solicito "
+                        + detalle.getCantidadSolicitada() + ".");
+            }
+        }
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public SolicitudResponseDTO obtenerPorId(Long id) {
         Solicitud solicitud = solicitudRepository.findById(id)
@@ -323,6 +396,7 @@ public class SolicitudServiceImpl implements SolicitudService {
                 solicitud.getFechaSolicitud(), solicitud.getEstatus(),
                 farmaceutico != null ? farmaceutico.getNombres() + " " + farmaceutico.getApellidoPaterno() : null,
                 solicitud.getFechaAprobacion(), solicitud.getFechaEntrega(), solicitud.getMotivoRechazo(),
+                solicitud.getMotivoCancelacion(),
                 detallesDto, solicitud.getCreatedAt()
         );
     }
