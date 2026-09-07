@@ -8,14 +8,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
-import java.util.List;
 
 public interface CompraRepository extends JpaRepository<Compra, Long> {
 
     // Un mismo folio puede repetirse entre proveedores distintos, pero no dentro del mismo.
     boolean existsByProveedorIdAndNumeroFactura(Long proveedorId, String numeroFactura);
-    List<Compra> findByProveedorId(Long proveedorId);
-    List<Compra> findByFechaCompraBetween(LocalDate inicio, LocalDate fin);
 
     // Proveedor y usuario de registro viajan en la misma consulta: se leen para cada fila
     // al armar la respuesta y provocaban dos consultas extra por compra.
