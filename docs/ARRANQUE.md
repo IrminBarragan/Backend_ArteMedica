@@ -3,7 +3,7 @@
 ## Requisitos
 
 - Java 21
-- PostgreSQL con una base de datos vacía llamada `artemedica_farmacia_db`
+- PostgreSQL con una base de datos vacía llamada `artemedica_farmacia_db` (vacía basta: Flyway crea el esquema)
 
 ## Variables de entorno
 
@@ -27,6 +27,29 @@ export DB_PASSWORD=tu_password
 ```
 
 La API queda en `http://localhost:8080/api`.
+
+## Esquema de base de datos
+
+El esquema lo gestiona **Flyway**, no Hibernate. Las migraciones viven en
+`src/main/resources/db/migration` y se aplican solas al arrancar.
+
+La aplicación corre con `spring.jpa.hibernate.ddl-auto=validate`: Hibernate solo comprueba que
+las entidades coincidan con las tablas y **falla el arranque si divergen**, en lugar de alterar
+la base por su cuenta. Si agregas un campo a una entidad y olvidas la migración, te enteras al
+arrancar y no en producción.
+
+### Cambiar el esquema
+
+Nunca edites una migración ya aplicada: Flyway guarda su suma de comprobación y rechazará el
+arranque si cambia. Crea una nueva:
+
+```
+src/main/resources/db/migration/V2__agregar_campo_x.sql
+```
+
+En las pruebas Flyway está deshabilitado y el esquema lo genera Hibernate desde las entidades,
+porque las migraciones están escritas en el dialecto de PostgreSQL y no corren sobre H2. La
+correspondencia entre entidades y migraciones la garantiza el `validate` del arranque real.
 
 ## Qué se siembra al arrancar
 
