@@ -62,13 +62,33 @@ Ejemplo de response:
   "username": "cmendoza",
   "rol": "FARMACEUTICO",
   "empleadoId": 3,
-  "expiresIn": 86400000
+  "expiresIn": 1800000,
+  "refreshToken": "kQ2f1z9m3X... (opaco, no es JWT)",
+  "refreshExpiresIn": 604800000
 }
 ```
 
 Posibles errores:
 - 400 si el body no pasa las validaciones
 - 401 si el usuario no existe, está inactivo, o la contraseña no coincide
+
+### POST /api/auth/refresh
+Rol requerido: ninguno (público)
+Descripción: renueva el access token usando el refresh token. **Rota** el refresh token: el que se manda queda revocado y la respuesta trae uno nuevo que hay que guardar en su lugar. Detalle completo en [AUTENTICACION.md](./AUTENTICACION.md).
+
+Request body: `RefreshRequestDTO`
+Response (200): `RefreshResponseDTO`
+
+Posibles errores:
+- 400 si `refreshToken` viene vacío
+- 401 si el refresh token no existe, expiró, o ya fue usado antes (reuso de un token rotado — revoca todas las sesiones del usuario por seguridad)
+
+### POST /api/auth/logout
+Rol requerido: ninguno (público)
+Descripción: revoca el refresh token recibido. El access token en curso sigue siendo válido hasta que expire por sí solo.
+
+Request body: `LogoutRequestDTO`
+Response (204): sin body. No falla si el token ya no existe o ya estaba revocado.
 
 ---
 

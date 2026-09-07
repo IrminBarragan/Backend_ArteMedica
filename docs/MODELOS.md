@@ -190,7 +190,16 @@ Ver [AUTENTICACION.md](./AUTENTICACION.md) para el detalle completo del flujo.
 `username` (string, requerido, no vacío), `password` (string, requerido, no vacío).
 
 ### `LoginResponseDTO`
-`token`, `tipo` (siempre `"Bearer"`), `username`, `rol`, `empleadoId`, `expiresIn` (milisegundos).
+`token`, `tipo` (siempre `"Bearer"`), `username`, `rol`, `empleadoId`, `expiresIn` (milisegundos del access token), `refreshToken` (opaco, no es JWT), `refreshExpiresIn` (milisegundos del refresh token).
+
+### `RefreshRequestDTO`
+`refreshToken` (string, requerido, no vacío).
+
+### `RefreshResponseDTO`
+`token`, `tipo` (siempre `"Bearer"`), `expiresIn`, `refreshToken` (nuevo, el recibido queda revocado), `refreshExpiresIn`.
+
+### `LogoutRequestDTO`
+`refreshToken` (string, requerido, no vacío).
 
 ---
 

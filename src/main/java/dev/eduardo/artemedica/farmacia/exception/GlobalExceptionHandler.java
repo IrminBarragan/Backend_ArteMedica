@@ -56,6 +56,11 @@ public class GlobalExceptionHandler {
         return construir(HttpStatus.UNAUTHORIZED, e.getMessage(), null);
     }
 
+    @ExceptionHandler(RefreshTokenInvalidoException.class)
+    public ResponseEntity<ErrorResponseDTO> handleRefreshTokenInvalido(RefreshTokenInvalidoException e) {
+        return construir(HttpStatus.UNAUTHORIZED, e.getMessage(), null);
+    }
+
     @ExceptionHandler(JwtException.class)
     public ResponseEntity<ErrorResponseDTO> handleJwt(JwtException e) {
         return construir(HttpStatus.UNAUTHORIZED, "Token invalido o expirado", null);
