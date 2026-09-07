@@ -4,6 +4,7 @@ import dev.eduardo.artemedica.farmacia.dto.CompraDetalleRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.CompraDetalleResponseDTO;
 import dev.eduardo.artemedica.farmacia.dto.CompraRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.CompraResponseDTO;
+import dev.eduardo.artemedica.farmacia.exception.ReglaNegocioException;
 import dev.eduardo.artemedica.farmacia.exception.ResourceNotFoundException;
 import dev.eduardo.artemedica.farmacia.model.Compra;
 import dev.eduardo.artemedica.farmacia.model.CompraDetalle;
@@ -69,6 +70,15 @@ public class CompraServiceImpl implements CompraService {
     public CompraResponseDTO registrarCompra(CompraRequestDTO dto, Long usuarioId) {
         Proveedor proveedor = proveedorRepository.findById(dto.proveedorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado: " + dto.proveedorId()));
+        if (!proveedor.isActivo()) {
+            throw new ReglaNegocioException("El proveedor " + proveedor.getNombre()
+                    + " esta dado de baja y no admite compras nuevas.");
+        }
+        // Registrar dos veces la misma factura duplicaria lotes y stock sin que nada lo advirtiera.
+        if (compraRepository.existsByProveedorIdAndNumeroFactura(dto.proveedorId(), dto.numeroFactura())) {
+            throw new ReglaNegocioException("Ya existe una compra registrada con la factura "
+                    + dto.numeroFactura() + " para el proveedor " + proveedor.getNombre() + ".");
+        }
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + usuarioId));
 
@@ -88,6 +98,10 @@ public class CompraServiceImpl implements CompraService {
         for (CompraDetalleRequestDTO detalleDto : dto.detalles()) {
             Producto producto = productoRepository.findById(detalleDto.productoId())
                     .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado: " + detalleDto.productoId()));
+            if (!producto.isActivo()) {
+                throw new ReglaNegocioException("El producto " + producto.getNombre()
+                        + " esta dado de baja y no admite entradas de inventario.");
+            }
 
             Lote lote = Lote.builder()
                     .numeroLote(detalleDto.numeroLote())

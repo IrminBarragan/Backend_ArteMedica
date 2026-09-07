@@ -94,6 +94,9 @@ public class SolicitudServiceImpl implements SolicitudService {
                 .orElseThrow(() -> new ResourceNotFoundException("Empleado (medico) no encontrado: " + medicoId));
         Area area = areaRepository.findById(dto.areaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Area no encontrada: " + dto.areaId()));
+        if (!area.isActivo()) {
+            throw new ReglaNegocioException("El area " + area.getNombre() + " esta dada de baja.");
+        }
 
         LocalDateTime ahora = LocalDateTime.now();
         Solicitud solicitud = Solicitud.builder()
@@ -109,6 +112,10 @@ public class SolicitudServiceImpl implements SolicitudService {
         for (SolicitudDetalleRequestDTO detalleDto : dto.detalles()) {
             Producto producto = productoRepository.findById(detalleDto.productoId())
                     .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado: " + detalleDto.productoId()));
+            if (!producto.isActivo()) {
+                throw new ReglaNegocioException("El producto " + producto.getNombre()
+                        + " esta dado de baja y no se puede solicitar.");
+            }
             SolicitudDetalle detalle = SolicitudDetalle.builder()
                     .solicitud(solicitud)
                     .producto(producto)
