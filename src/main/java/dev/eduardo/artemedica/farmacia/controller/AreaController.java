@@ -2,8 +2,11 @@ package dev.eduardo.artemedica.farmacia.controller;
 
 import dev.eduardo.artemedica.farmacia.dto.AreaRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.AreaResponseDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.service.AreaService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/areas")
@@ -47,8 +49,9 @@ public class AreaController {
     }
 
     @GetMapping
-    public ResponseEntity<List<AreaResponseDTO>> listarActivos() {
-        return ResponseEntity.ok(areaService.listarActivos());
+    public ResponseEntity<PaginaDTO<AreaResponseDTO>> listarActivos(
+            @PageableDefault(size = 20, sort = "nombre") Pageable pageable) {
+        return ResponseEntity.ok(areaService.listarActivos(pageable));
     }
 
     @DeleteMapping("/{id}")

@@ -1,5 +1,6 @@
 package dev.eduardo.artemedica.farmacia.service.impl;
 
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.dto.UsuarioRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.UsuarioResponseDTO;
 import dev.eduardo.artemedica.farmacia.exception.AutenticacionException;
@@ -9,12 +10,12 @@ import dev.eduardo.artemedica.farmacia.model.Usuario;
 import dev.eduardo.artemedica.farmacia.repository.EmpleadoRepository;
 import dev.eduardo.artemedica.farmacia.repository.UsuarioRepository;
 import dev.eduardo.artemedica.farmacia.service.UsuarioService;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class UsuarioServiceImpl implements UsuarioService {
@@ -69,8 +70,8 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UsuarioResponseDTO> listarActivos() {
-        return usuarioRepository.findByActivoTrue().stream().map(this::toDto).toList();
+    public PaginaDTO<UsuarioResponseDTO> listarActivos(Pageable pageable) {
+        return PaginaDTO.de(usuarioRepository.findByActivoTrue(pageable), this::toDto);
     }
 
     @Override

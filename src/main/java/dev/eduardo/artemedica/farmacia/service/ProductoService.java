@@ -1,15 +1,15 @@
 package dev.eduardo.artemedica.farmacia.service;
 
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.dto.ProductoRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.ProductoResponseDTO;
-
-import java.util.List;
+import org.springframework.data.domain.Pageable;
 
 public interface ProductoService {
     ProductoResponseDTO crear(ProductoRequestDTO dto);
     ProductoResponseDTO actualizar(Long id, ProductoRequestDTO dto);
     ProductoResponseDTO obtenerPorId(Long id);
-    List<ProductoResponseDTO> listarActivos();
-    List<ProductoResponseDTO> listarStockBajo();
+    PaginaDTO<ProductoResponseDTO> listarActivos(Pageable pageable);
+    PaginaDTO<ProductoResponseDTO> listarStockBajo(Pageable pageable);
     void desactivar(Long id);
 }

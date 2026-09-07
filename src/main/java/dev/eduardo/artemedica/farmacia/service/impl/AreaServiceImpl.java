@@ -2,14 +2,14 @@ package dev.eduardo.artemedica.farmacia.service.impl;
 
 import dev.eduardo.artemedica.farmacia.dto.AreaRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.AreaResponseDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.exception.ResourceNotFoundException;
 import dev.eduardo.artemedica.farmacia.model.Area;
 import dev.eduardo.artemedica.farmacia.repository.AreaRepository;
 import dev.eduardo.artemedica.farmacia.service.AreaService;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 public class AreaServiceImpl implements AreaService {
@@ -48,8 +48,8 @@ public class AreaServiceImpl implements AreaService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<AreaResponseDTO> listarActivos() {
-        return areaRepository.findByActivoTrue().stream().map(this::toDto).toList();
+    public PaginaDTO<AreaResponseDTO> listarActivos(Pageable pageable) {
+        return PaginaDTO.de(areaRepository.findByActivoTrue(pageable), this::toDto);
     }
 
     @Override

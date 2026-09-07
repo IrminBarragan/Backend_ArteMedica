@@ -16,6 +16,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -123,7 +124,7 @@ class EstrategiaSeleccionLoteTest {
     @Test
     @DisplayName("ninguna estrategia ofrece lotes ya caducados")
     void ningunaEstrategiaOfreceCaducados() {
-        loteRepository.findByProductoIdAndActivoTrue(productoId).forEach(lote -> {
+        loteRepository.findByProductoIdAndActivoTrue(productoId, Pageable.unpaged()).forEach(lote -> {
             lote.setFechaCaducidad(LocalDate.now().minusDays(1));
             loteRepository.save(lote);
         });
@@ -138,7 +139,7 @@ class EstrategiaSeleccionLoteTest {
     @Test
     @DisplayName("ninguna estrategia ofrece lotes agotados ni dados de baja")
     void ningunaEstrategiaOfreceAgotadosNiInactivos() {
-        List<Lote> lotes = loteRepository.findByProductoIdAndActivoTrue(productoId);
+        List<Lote> lotes = loteRepository.findByProductoIdAndActivoTrue(productoId, Pageable.unpaged()).getContent();
         lotes.stream().filter(l -> l.getNumeroLote().equals("RECIENTE")).forEach(l -> {
             l.setExistenciaActual(0);
             loteRepository.save(l);

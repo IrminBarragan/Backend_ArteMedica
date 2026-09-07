@@ -1,16 +1,17 @@
 package dev.eduardo.artemedica.farmacia.service;
 
 import dev.eduardo.artemedica.farmacia.dto.LoteResponseDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
-import java.util.List;
 
 public interface LoteService {
     LoteResponseDTO obtenerPorId(Long id);
-    List<LoteResponseDTO> listarActivos();
-    List<LoteResponseDTO> listarPorProducto(Long productoId);
-    List<LoteResponseDTO> listarVencidos();
-    List<LoteResponseDTO> listarPorVencer(LocalDate fechaLimite);
+    PaginaDTO<LoteResponseDTO> listarActivos(Pageable pageable);
+    PaginaDTO<LoteResponseDTO> listarPorProducto(Long productoId, Pageable pageable);
+    PaginaDTO<LoteResponseDTO> listarVencidos(Pageable pageable);
+    PaginaDTO<LoteResponseDTO> listarPorVencer(LocalDate fechaLimite, Pageable pageable);
 
     /**
      * Da de baja el lote: merma las unidades que le queden y lo marca inactivo.

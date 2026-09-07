@@ -1,5 +1,6 @@
 package dev.eduardo.artemedica.farmacia.service.impl;
 
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.dto.ProductoRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.ProductoResponseDTO;
 import dev.eduardo.artemedica.farmacia.exception.ResourceNotFoundException;
@@ -8,10 +9,9 @@ import dev.eduardo.artemedica.farmacia.model.Producto;
 import dev.eduardo.artemedica.farmacia.repository.CategoriaMedicamentoRepository;
 import dev.eduardo.artemedica.farmacia.repository.ProductoRepository;
 import dev.eduardo.artemedica.farmacia.service.ProductoService;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 public class ProductoServiceImpl implements ProductoService {
@@ -68,14 +68,14 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ProductoResponseDTO> listarActivos() {
-        return productoRepository.findByActivoTrue().stream().map(this::toDto).toList();
+    public PaginaDTO<ProductoResponseDTO> listarActivos(Pageable pageable) {
+        return PaginaDTO.de(productoRepository.findByActivoTrue(pageable), this::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ProductoResponseDTO> listarStockBajo() {
-        return productoRepository.findProductosStockBajo().stream().map(this::toDto).toList();
+    public PaginaDTO<ProductoResponseDTO> listarStockBajo(Pageable pageable) {
+        return PaginaDTO.de(productoRepository.findProductosStockBajo(pageable), this::toDto);
     }
 
     @Override

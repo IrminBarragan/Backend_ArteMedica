@@ -62,16 +62,14 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     @Override
     @Transactional(readOnly = true)
-    public List<MovimientoInventarioResponseDTO> listarRecientes() {
-        return movimientoRepository.buscarRecientes()
-                .stream().map(this::toDto).toList();
+    public PaginaDTO<MovimientoInventarioResponseDTO> listarRecientes(Pageable pageable) {
+        return PaginaDTO.de(movimientoRepository.buscarTodos(pageable), this::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<MovimientoInventarioResponseDTO> listarPorOrigen(OrigenMovimiento origenTipo, Long origenId) {
-        return movimientoRepository.buscarPorOrigen(origenTipo, origenId)
-                .stream().map(this::toDto).toList();
+    public PaginaDTO<MovimientoInventarioResponseDTO> listarPorOrigen(OrigenMovimiento origenTipo, Long origenId, Pageable pageable) {
+        return PaginaDTO.de(movimientoRepository.buscarPorOrigen(origenTipo, origenId, pageable), this::toDto);
     }
 
     // ---------------------------------------------------------------------

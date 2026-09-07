@@ -2,9 +2,12 @@ package dev.eduardo.artemedica.farmacia.controller;
 
 import dev.eduardo.artemedica.farmacia.dto.BajaLoteRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.LoteResponseDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.security.UsuarioPrincipal;
 import dev.eduardo.artemedica.farmacia.service.LoteService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/lotes")
@@ -31,8 +33,9 @@ public class LoteController {
     }
 
     @GetMapping
-    public ResponseEntity<List<LoteResponseDTO>> listarActivos() {
-        return ResponseEntity.ok(loteService.listarActivos());
+    public ResponseEntity<PaginaDTO<LoteResponseDTO>> listarActivos(
+            @PageableDefault(size = 20, sort = "fechaCaducidad") Pageable pageable) {
+        return ResponseEntity.ok(loteService.listarActivos(pageable));
     }
 
     @GetMapping("/{id}")
@@ -41,19 +44,23 @@ public class LoteController {
     }
 
     @GetMapping("/producto/{productoId}")
-    public ResponseEntity<List<LoteResponseDTO>> listarPorProducto(@PathVariable Long productoId) {
-        return ResponseEntity.ok(loteService.listarPorProducto(productoId));
+    public ResponseEntity<PaginaDTO<LoteResponseDTO>> listarPorProducto(
+            @PathVariable Long productoId,
+            @PageableDefault(size = 20, sort = "fechaCaducidad") Pageable pageable) {
+        return ResponseEntity.ok(loteService.listarPorProducto(productoId, pageable));
     }
 
     @GetMapping("/vencidos")
-    public ResponseEntity<List<LoteResponseDTO>> listarVencidos() {
-        return ResponseEntity.ok(loteService.listarVencidos());
+    public ResponseEntity<PaginaDTO<LoteResponseDTO>> listarVencidos(
+            @PageableDefault(size = 20, sort = "fechaCaducidad") Pageable pageable) {
+        return ResponseEntity.ok(loteService.listarVencidos(pageable));
     }
 
     @GetMapping("/por-vencer")
-    public ResponseEntity<List<LoteResponseDTO>> listarPorVencer(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaLimite) {
-        return ResponseEntity.ok(loteService.listarPorVencer(fechaLimite));
+    public ResponseEntity<PaginaDTO<LoteResponseDTO>> listarPorVencer(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaLimite,
+            @PageableDefault(size = 20, sort = "fechaCaducidad") Pageable pageable) {
+        return ResponseEntity.ok(loteService.listarPorVencer(fechaLimite, pageable));
     }
 
     /**

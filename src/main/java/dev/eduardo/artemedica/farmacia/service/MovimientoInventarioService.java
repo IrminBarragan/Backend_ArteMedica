@@ -20,10 +20,10 @@ public interface MovimientoInventarioService {
 
     PaginaDTO<MovimientoInventarioResponseDTO> listarPorLote(Long loteId, Pageable pageable);
 
-    List<MovimientoInventarioResponseDTO> listarRecientes();
+    PaginaDTO<MovimientoInventarioResponseDTO> listarRecientes(Pageable pageable);
 
     /** Movimientos generados por un documento concreto, ej. todos los de la compra 12. */
-    List<MovimientoInventarioResponseDTO> listarPorOrigen(OrigenMovimiento origenTipo, Long origenId);
+    PaginaDTO<MovimientoInventarioResponseDTO> listarPorOrigen(OrigenMovimiento origenTipo, Long origenId, Pageable pageable);
 
     /** Da de baja unidades de un lote por perdida. Descuenta existencia y stock del producto. */
     MovimientoInventarioResponseDTO registrarMerma(MermaRequestDTO dto, Long usuarioId);

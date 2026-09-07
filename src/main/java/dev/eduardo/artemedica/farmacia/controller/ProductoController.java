@@ -1,9 +1,12 @@
 package dev.eduardo.artemedica.farmacia.controller;
 
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.dto.ProductoRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.ProductoResponseDTO;
 import dev.eduardo.artemedica.farmacia.service.ProductoService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/productos")
@@ -47,13 +49,15 @@ public class ProductoController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ProductoResponseDTO>> listarActivos() {
-        return ResponseEntity.ok(productoService.listarActivos());
+    public ResponseEntity<PaginaDTO<ProductoResponseDTO>> listarActivos(
+            @PageableDefault(size = 20, sort = "nombre") Pageable pageable) {
+        return ResponseEntity.ok(productoService.listarActivos(pageable));
     }
 
     @GetMapping("/stock-bajo")
-    public ResponseEntity<List<ProductoResponseDTO>> listarStockBajo() {
-        return ResponseEntity.ok(productoService.listarStockBajo());
+    public ResponseEntity<PaginaDTO<ProductoResponseDTO>> listarStockBajo(
+            @PageableDefault(size = 20, sort = "stockActual") Pageable pageable) {
+        return ResponseEntity.ok(productoService.listarStockBajo(pageable));
     }
 
     @DeleteMapping("/{id}")

@@ -1,15 +1,15 @@
 package dev.eduardo.artemedica.farmacia.service.impl;
 
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.dto.ProveedorRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.ProveedorResponseDTO;
 import dev.eduardo.artemedica.farmacia.exception.ResourceNotFoundException;
 import dev.eduardo.artemedica.farmacia.model.Proveedor;
 import dev.eduardo.artemedica.farmacia.repository.ProveedorRepository;
 import dev.eduardo.artemedica.farmacia.service.ProveedorService;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 public class ProveedorServiceImpl implements ProveedorService {
@@ -52,8 +52,8 @@ public class ProveedorServiceImpl implements ProveedorService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ProveedorResponseDTO> listarActivos() {
-        return proveedorRepository.findByActivoTrue().stream().map(this::toDto).toList();
+    public PaginaDTO<ProveedorResponseDTO> listarActivos(Pageable pageable) {
+        return PaginaDTO.de(proveedorRepository.findByActivoTrue(pageable), this::toDto);
     }
 
     @Override
