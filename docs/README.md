@@ -8,6 +8,7 @@ Esta carpeta está pensada para que un agente o desarrollador de frontend entien
 
 ## Contenido de esta carpeta
 
+- **[ARRANQUE.md](./ARRANQUE.md)** — Cómo levantar la API en local: variables de entorno, qué datos se siembran al arrancar y con qué credenciales entrar la primera vez.
 - **[AUTENTICACION.md](./AUTENTICACION.md)** — Cómo hacer login, cómo usar el token JWT, expiración, qué pasa cuando el token falta o es inválido, y los 3 roles del sistema.
 - **[MODELOS.md](./MODELOS.md)** — Todos los DTOs (request/response) reales del proyecto, campo por campo, con sus validaciones traducidas a lenguaje natural, y los enums del dominio.
 - **[API.md](./API.md)** — El catálogo completo de endpoints, uno por uno, con rol requerido, body, respuesta, ejemplos de JSON realistas y posibles errores.

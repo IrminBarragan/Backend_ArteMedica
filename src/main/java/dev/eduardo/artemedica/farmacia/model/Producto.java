@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import org.hibernate.annotations.DynamicUpdate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,6 +21,10 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "producto")
+// Solo se actualizan las columnas realmente modificadas. Sin esto, guardar un producto tras
+// editar su nombre reescribiria stock_actual con el valor leido antes, pisando los ajustes
+// atomicos que hayan ocurrido entretanto.
+@DynamicUpdate
 @Getter
 @Setter
 @NoArgsConstructor

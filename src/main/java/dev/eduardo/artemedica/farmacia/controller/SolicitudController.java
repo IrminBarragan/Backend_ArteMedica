@@ -1,6 +1,8 @@
 package dev.eduardo.artemedica.farmacia.controller;
 
 import dev.eduardo.artemedica.farmacia.dto.AprobarSolicitudRequestDTO;
+import dev.eduardo.artemedica.farmacia.dto.CancelarSolicitudRequestDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.dto.RechazarSolicitudRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudResponseDTO;
@@ -9,6 +11,9 @@ import dev.eduardo.artemedica.farmacia.model.enums.Rol;
 import dev.eduardo.artemedica.farmacia.security.UsuarioPrincipal;
 import dev.eduardo.artemedica.farmacia.service.SolicitudService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -69,15 +74,35 @@ public class SolicitudController {
         return ResponseEntity.ok(actualizada);
     }
 
+    /**
+     * Retira una solicitud PENDIENTE. Un MEDICO solo puede cancelar las suyas; ADMIN y
+     * FARMACEUTICO pueden cancelar cualquiera. El dueno se comprueba en el servicio contra
+     * el empleadoId del token, nunca contra un dato del cuerpo de la peticion.
+     */
+    @PutMapping("/{id}/cancelar")
+    public ResponseEntity<SolicitudResponseDTO> cancelar(@PathVariable Long id,
+                                                           @RequestBody(required = false) CancelarSolicitudRequestDTO dto,
+                                                           @AuthenticationPrincipal UsuarioPrincipal principal) {
+        boolean puedeCancelarAjenas = principal.getRol() != Rol.MEDICO;
+        String motivo = dto != null ? dto.motivo() : null;
+        return ResponseEntity.ok(
+                solicitudService.cancelar(id, motivo, principal.getEmpleadoId(), puedeCancelarAjenas));
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<SolicitudResponseDTO> obtenerPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(solicitudService.obtenerPorId(id));
+    public ResponseEntity<SolicitudResponseDTO> obtenerPorId(@PathVariable Long id,
+                                                               @AuthenticationPrincipal UsuarioPrincipal principal) {
+        boolean puedeVerAjenas = principal.getRol() != Rol.MEDICO;
+        return ResponseEntity.ok(
+                solicitudService.obtenerPorId(id, principal.getEmpleadoId(), puedeVerAjenas));
     }
 
     @GetMapping
-    public ResponseEntity<List<SolicitudResponseDTO>> listar(@RequestParam(required = false) EstatusSolicitud estatus,
-                                                               @AuthenticationPrincipal UsuarioPrincipal principal) {
+    public ResponseEntity<PaginaDTO<SolicitudResponseDTO>> listar(
+            @RequestParam(required = false) EstatusSolicitud estatus,
+            @PageableDefault(size = 20, sort = "fechaSolicitud", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal UsuarioPrincipal principal) {
         Long medicoId = principal.getRol() == Rol.MEDICO ? principal.getEmpleadoId() : null;
-        return ResponseEntity.ok(solicitudService.listar(estatus, medicoId));
+        return ResponseEntity.ok(solicitudService.listar(estatus, medicoId, pageable));
     }
 }

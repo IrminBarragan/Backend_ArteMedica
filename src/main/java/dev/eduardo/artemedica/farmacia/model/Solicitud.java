@@ -66,6 +66,9 @@ public class Solicitud {
     private String motivoRechazo;
 
     @Column
+    private String motivoCancelacion;
+
+    @Column
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "solicitud", cascade = CascadeType.ALL)

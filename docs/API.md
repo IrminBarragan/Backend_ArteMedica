@@ -1,3 +1,30 @@
+# Paginación
+
+Tres endpoints devuelven páginas en lugar de una lista completa, porque sus colecciones crecen
+sin cota: `GET /api/solicitudes`, `GET /api/compras` y los listados del kardex
+(`GET /api/movimientos/producto/{id}` y `/lote/{id}`).
+
+Aceptan los parámetros `page` (base 0), `size` y `sort`, y devuelven este envoltorio:
+
+```json
+{
+  "contenido": [ /* los elementos de esta página */ ],
+  "pagina": 0,
+  "tamano": 20,
+  "totalElementos": 26,
+  "totalPaginas": 2,
+  "primera": true,
+  "ultima": false
+}
+```
+
+Por defecto son 20 elementos, ordenados por fecha descendente. Los filtros ya existentes
+(`estatus`, `proveedorId`, `desde`, `hasta`) siguen funcionando y se combinan con la paginación.
+
+Los catálogos (áreas, categorías, proveedores, empleados, usuarios, productos, lotes) siguen
+devolviendo una lista simple: son colecciones acotadas que el frontend necesita completas para
+llenar selectores.
+
 # API — Catálogo de endpoints
 
 Todos los endpoints cuelgan de `/api`. Todos requieren el header `Authorization: Bearer <token>` (ver [AUTENTICACION.md](./AUTENTICACION.md)) **excepto** `POST /api/auth/login`.

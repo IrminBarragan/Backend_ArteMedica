@@ -1,11 +1,13 @@
 package dev.eduardo.artemedica.farmacia.service.impl;
 
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudDetalleRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudDetalleResponseDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudResponseDTO;
 import dev.eduardo.artemedica.farmacia.exception.ConflictoConcurrenciaException;
 import dev.eduardo.artemedica.farmacia.exception.EstadoInvalidoException;
+import dev.eduardo.artemedica.farmacia.exception.ReglaNegocioException;
 import dev.eduardo.artemedica.farmacia.exception.ResourceNotFoundException;
 import dev.eduardo.artemedica.farmacia.exception.StockInsuficienteException;
 import dev.eduardo.artemedica.farmacia.model.Area;
@@ -39,14 +41,20 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.function.Supplier;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 
 @Service
 public class SolicitudServiceImpl implements SolicitudService {
 
-    private static final int MAX_INTENTOS_STOCK = 3;
 
     private final SolicitudRepository solicitudRepository;
     private final SolicitudDetalleRepository solicitudDetalleRepository;
@@ -88,6 +96,9 @@ public class SolicitudServiceImpl implements SolicitudService {
                 .orElseThrow(() -> new ResourceNotFoundException("Empleado (medico) no encontrado: " + medicoId));
         Area area = areaRepository.findById(dto.areaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Area no encontrada: " + dto.areaId()));
+        if (!area.isActivo()) {
+            throw new ReglaNegocioException("El area " + area.getNombre() + " esta dada de baja.");
+        }
 
         LocalDateTime ahora = LocalDateTime.now();
         Solicitud solicitud = Solicitud.builder()
@@ -103,6 +114,10 @@ public class SolicitudServiceImpl implements SolicitudService {
         for (SolicitudDetalleRequestDTO detalleDto : dto.detalles()) {
             Producto producto = productoRepository.findById(detalleDto.productoId())
                     .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado: " + detalleDto.productoId()));
+            if (!producto.isActivo()) {
+                throw new ReglaNegocioException("El producto " + producto.getNombre()
+                        + " esta dado de baja y no se puede solicitar.");
+            }
             SolicitudDetalle detalle = SolicitudDetalle.builder()
                     .solicitud(solicitud)
                     .producto(producto)
@@ -128,10 +143,12 @@ public class SolicitudServiceImpl implements SolicitudService {
                     .orElseThrow(() -> new ResourceNotFoundException("Empleado (farmaceutico) no encontrado: " + farmaceuticoId));
 
             List<SolicitudDetalle> detalles = solicitudDetalleRepository.findBySolicitudId(solicitudId);
+            validarCantidadesAutorizadas(detalles, cantidadesAutorizadasPorProducto);
+
             LocalDate hoy = LocalDate.now();
             for (SolicitudDetalle detalle : detalles) {
                 Producto producto = detalle.getProducto();
-                int cantidadAutorizada = cantidadesAutorizadasPorProducto.getOrDefault(producto.getId(), 0);
+                int cantidadAutorizada = cantidadesAutorizadasPorProducto.get(producto.getId());
 
                 int disponible = loteRepository.findByProductoIdAndActivoTrueAndExistenciaActualGreaterThan(producto.getId(), 0)
                         .stream()
@@ -245,7 +262,7 @@ public class SolicitudServiceImpl implements SolicitudService {
                         detalle.setLote(lote);
                     }
 
-                    stockAjustador.actualizarStockConReintento(productoId, -cantidadTomada, MAX_INTENTOS_STOCK);
+                    stockAjustador.ajustarStock(productoId, -cantidadTomada);
                 }
 
                 solicitudDetalleRepository.save(detalle);
@@ -268,31 +285,111 @@ public class SolicitudServiceImpl implements SolicitudService {
     }
 
     @Override
+    @Transactional
+    public SolicitudResponseDTO cancelar(Long solicitudId, String motivo, Long empleadoId,
+                                          boolean puedeCancelarAjenas) {
+        return conLockManejado(() -> {
+            Solicitud solicitud = solicitudRepository.findByIdForUpdate(solicitudId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Solicitud no encontrada: " + solicitudId));
+
+            if (solicitud.getEstatus() != EstatusSolicitud.PENDIENTE) {
+                throw new EstadoInvalidoException("Solo se puede cancelar una solicitud en estatus PENDIENTE. "
+                        + "La solicitud " + solicitudId + " esta en " + solicitud.getEstatus() + ".");
+            }
+            // Un medico solo retira lo suyo; el dueno se toma de la solicitud, nunca del cuerpo
+            // de la peticion, para que nadie pueda cancelar la solicitud de otro medico.
+            if (!puedeCancelarAjenas && !solicitud.getMedico().getId().equals(empleadoId)) {
+                throw new AccessDeniedException("No puedes cancelar una solicitud que no creaste.");
+            }
+
+            solicitud.setEstatus(EstatusSolicitud.CANCELADA);
+            solicitud.setMotivoCancelacion(motivo);
+            Solicitud actualizada = solicitudRepository.save(solicitud);
+
+            return toDto(actualizada, solicitudDetalleRepository.findBySolicitudId(solicitudId));
+        });
+    }
+
+    /**
+     * El mapa de cantidades autorizadas debe cubrir exactamente los productos de la solicitud.
+     *
+     * Antes se usaba getOrDefault(id, 0): omitir un producto lo autorizaba en cero en silencio,
+     * y no habia nada que impidiera autorizar mas unidades de las que el medico pidio.
+     */
+    private void validarCantidadesAutorizadas(List<SolicitudDetalle> detalles,
+                                               Map<Long, Integer> cantidadesAutorizadasPorProducto) {
+        Set<Long> productosDeLaSolicitud = detalles.stream()
+                .map(d -> d.getProducto().getId())
+                .collect(Collectors.toSet());
+
+        Set<Long> productosAjenos = new HashSet<>(cantidadesAutorizadasPorProducto.keySet());
+        productosAjenos.removeAll(productosDeLaSolicitud);
+        if (!productosAjenos.isEmpty()) {
+            throw new ReglaNegocioException("Los productos " + productosAjenos
+                    + " no forman parte de esta solicitud.");
+        }
+
+        for (SolicitudDetalle detalle : detalles) {
+            Long productoId = detalle.getProducto().getId();
+            Integer autorizada = cantidadesAutorizadasPorProducto.get(productoId);
+
+            if (autorizada == null) {
+                throw new ReglaNegocioException("Falta indicar la cantidad autorizada para el producto "
+                        + detalle.getProducto().getNombre() + " (id " + productoId + ").");
+            }
+            if (autorizada < 0) {
+                throw new ReglaNegocioException("La cantidad autorizada para "
+                        + detalle.getProducto().getNombre() + " no puede ser negativa.");
+            }
+            if (autorizada > detalle.getCantidadSolicitada()) {
+                throw new ReglaNegocioException("No se pueden autorizar " + autorizada + " unidades de "
+                        + detalle.getProducto().getNombre() + ": el medico solicito "
+                        + detalle.getCantidadSolicitada() + ".");
+            }
+        }
+    }
+
+    @Override
     @Transactional(readOnly = true)
-    public SolicitudResponseDTO obtenerPorId(Long id) {
+    public SolicitudResponseDTO obtenerPorId(Long id, Long empleadoId, boolean puedeVerAjenas) {
         Solicitud solicitud = solicitudRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Solicitud no encontrada: " + id));
+
+        // El listado ya filtraba por medico, pero la consulta directa por id no comprobaba nada:
+        // bastaba con ir probando identificadores para leer que medicamentos pidio otro medico.
+        if (!puedeVerAjenas && !solicitud.getMedico().getId().equals(empleadoId)) {
+            throw new AccessDeniedException("No puedes consultar una solicitud que no creaste.");
+        }
+
         List<SolicitudDetalle> detalles = solicitudDetalleRepository.findBySolicitudId(id);
         return toDto(solicitud, detalles);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<SolicitudResponseDTO> listar(EstatusSolicitud estatus, Long medicoId) {
-        List<Solicitud> solicitudes;
+    public PaginaDTO<SolicitudResponseDTO> listar(EstatusSolicitud estatus, Long medicoId, Pageable pageable) {
+        Page<Solicitud> pagina;
         if (estatus != null && medicoId != null) {
-            solicitudes = solicitudRepository.findByEstatusAndMedicoId(estatus, medicoId);
+            pagina = solicitudRepository.buscarPorEstatusYMedico(estatus, medicoId, pageable);
         } else if (estatus != null) {
-            solicitudes = solicitudRepository.findByEstatus(estatus);
+            pagina = solicitudRepository.buscarPorEstatus(estatus, pageable);
         } else if (medicoId != null) {
-            solicitudes = solicitudRepository.findByMedicoId(medicoId);
+            pagina = solicitudRepository.buscarPorMedico(medicoId, pageable);
         } else {
-            solicitudes = solicitudRepository.findAll();
+            pagina = solicitudRepository.buscarTodas(pageable);
         }
 
-        return solicitudes.stream()
-                .map(solicitud -> toDto(solicitud, solicitudDetalleRepository.findBySolicitudId(solicitud.getId())))
-                .toList();
+        // Los detalles de toda la pagina se traen en una sola consulta y se agrupan en memoria.
+        // Pedirlos solicitud por solicitud era el N+1 que hacia crecer el costo con el tamano
+        // de la pagina en lugar de mantenerlo constante.
+        List<Long> ids = pagina.getContent().stream().map(Solicitud::getId).toList();
+        Map<Long, List<SolicitudDetalle>> detallesPorSolicitud = ids.isEmpty()
+                ? Map.of()
+                : solicitudDetalleRepository.findBySolicitudIdIn(ids).stream()
+                        .collect(Collectors.groupingBy(d -> d.getSolicitud().getId()));
+
+        return PaginaDTO.de(pagina,
+                solicitud -> toDto(solicitud, detallesPorSolicitud.getOrDefault(solicitud.getId(), List.of())));
     }
 
     private boolean estaCompleto(SolicitudDetalle detalle) {
@@ -323,6 +420,7 @@ public class SolicitudServiceImpl implements SolicitudService {
                 solicitud.getFechaSolicitud(), solicitud.getEstatus(),
                 farmaceutico != null ? farmaceutico.getNombres() + " " + farmaceutico.getApellidoPaterno() : null,
                 solicitud.getFechaAprobacion(), solicitud.getFechaEntrega(), solicitud.getMotivoRechazo(),
+                solicitud.getMotivoCancelacion(),
                 detallesDto, solicitud.getCreatedAt()
         );
     }
