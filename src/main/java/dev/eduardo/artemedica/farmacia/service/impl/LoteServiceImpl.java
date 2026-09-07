@@ -5,6 +5,7 @@ import dev.eduardo.artemedica.farmacia.exception.ResourceNotFoundException;
 import dev.eduardo.artemedica.farmacia.model.Lote;
 import dev.eduardo.artemedica.farmacia.repository.LoteRepository;
 import dev.eduardo.artemedica.farmacia.service.LoteService;
+import dev.eduardo.artemedica.farmacia.service.MovimientoInventarioService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,9 +16,12 @@ import java.util.List;
 public class LoteServiceImpl implements LoteService {
 
     private final LoteRepository loteRepository;
+    private final MovimientoInventarioService movimientoInventarioService;
 
-    public LoteServiceImpl(LoteRepository loteRepository) {
+    public LoteServiceImpl(LoteRepository loteRepository,
+                           MovimientoInventarioService movimientoInventarioService) {
         this.loteRepository = loteRepository;
+        this.movimientoInventarioService = movimientoInventarioService;
     }
 
     @Override
@@ -52,10 +56,10 @@ public class LoteServiceImpl implements LoteService {
 
     @Override
     @Transactional
-    public void desactivar(Long id) {
-        Lote lote = obtenerEntidad(id);
-        lote.setActivo(false);
-        loteRepository.save(lote);
+    public void darDeBaja(Long id, String motivo, Long usuarioId) {
+        // La baja se delega en el kardex: alli se merma la existencia restante, se descuenta
+        // el stock del producto y queda registrado quien dio de baja el lote y por que.
+        movimientoInventarioService.darDeBajaLote(id, motivo, usuarioId);
     }
 
     private Lote obtenerEntidad(Long id) {

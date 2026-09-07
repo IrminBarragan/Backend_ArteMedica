@@ -11,5 +11,12 @@ public interface LoteService {
     List<LoteResponseDTO> listarPorProducto(Long productoId);
     List<LoteResponseDTO> listarVencidos();
     List<LoteResponseDTO> listarPorVencer(LocalDate fechaLimite);
-    void desactivar(Long id);
+
+    /**
+     * Da de baja el lote: merma las unidades que le queden y lo marca inactivo.
+     *
+     * Requiere motivo y usuario porque la baja genera un movimiento de kardex. Marcar el lote
+     * como inactivo sin descontar su existencia dejaria inflado Producto.stockActual.
+     */
+    void darDeBaja(Long id, String motivo, Long usuarioId);
 }
