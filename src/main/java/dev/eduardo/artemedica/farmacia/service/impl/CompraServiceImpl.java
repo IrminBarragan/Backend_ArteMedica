@@ -36,7 +36,6 @@ import java.util.List;
 @Service
 public class CompraServiceImpl implements CompraService {
 
-    private static final int MAX_INTENTOS_STOCK = 3;
 
     private final ProveedorRepository proveedorRepository;
     private final UsuarioRepository usuarioRepository;
@@ -126,7 +125,7 @@ public class CompraServiceImpl implements CompraService {
                     .build();
             compraDetalleRepository.save(detalle);
 
-            stockAjustador.actualizarStockConReintento(producto.getId(), detalleDto.cantidad(), MAX_INTENTOS_STOCK);
+            stockAjustador.ajustarStock(producto.getId(), detalleDto.cantidad());
 
             MovimientoInventario movimiento = MovimientoInventario.builder()
                     .lote(lote)

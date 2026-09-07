@@ -111,7 +111,7 @@ class CompraServiceTest {
         assertThat(loteCaptor.getValue().getCantidadInicial()).isEqualTo(100);
         assertThat(loteCaptor.getValue().getExistenciaActual()).isEqualTo(100);
 
-        verify(stockAjustador).actualizarStockConReintento(eq(2L), eq(100), anyInt());
+        verify(stockAjustador).ajustarStock(eq(2L), eq(100));
 
         ArgumentCaptor<MovimientoInventario> movCaptor =
                 ArgumentCaptor.forClass(MovimientoInventario.class);
@@ -145,7 +145,7 @@ class CompraServiceTest {
                 .hasMessageContaining("Ya existe una compra registrada");
 
         verify(loteRepository, never()).save(any());
-        verify(stockAjustador, never()).actualizarStockConReintento(any(), anyInt(), anyInt());
+        verify(stockAjustador, never()).ajustarStock(any(), anyInt());
     }
 
     @Test

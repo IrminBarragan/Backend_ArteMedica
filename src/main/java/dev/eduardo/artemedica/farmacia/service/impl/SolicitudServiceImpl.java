@@ -52,7 +52,6 @@ import org.springframework.security.access.AccessDeniedException;
 @Service
 public class SolicitudServiceImpl implements SolicitudService {
 
-    private static final int MAX_INTENTOS_STOCK = 3;
 
     private final SolicitudRepository solicitudRepository;
     private final SolicitudDetalleRepository solicitudDetalleRepository;
@@ -260,7 +259,7 @@ public class SolicitudServiceImpl implements SolicitudService {
                         detalle.setLote(lote);
                     }
 
-                    stockAjustador.actualizarStockConReintento(productoId, -cantidadTomada, MAX_INTENTOS_STOCK);
+                    stockAjustador.ajustarStock(productoId, -cantidadTomada);
                 }
 
                 solicitudDetalleRepository.save(detalle);

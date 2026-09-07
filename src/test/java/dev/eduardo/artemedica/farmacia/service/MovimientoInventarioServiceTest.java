@@ -72,7 +72,7 @@ class MovimientoInventarioServiceTest {
                 service.registrarMerma(new MermaRequestDTO(3L, 10, "Frasco roto"), 1L);
 
         assertThat(lote.getExistenciaActual()).isEqualTo(30);
-        verify(stockAjustador).actualizarStockConReintento(eq(7L), eq(-10), anyInt());
+        verify(stockAjustador).ajustarStock(eq(7L), eq(-10));
         assertThat(resultado.tipoMovimiento()).isEqualTo(TipoMovimiento.MERMA);
         assertThat(resultado.cantidad()).isEqualTo(10);
         assertThat(resultado.saldoResultante()).isEqualTo(30);
@@ -89,7 +89,7 @@ class MovimientoInventarioServiceTest {
                 .isInstanceOf(StockInsuficienteException.class);
 
         assertThat(lote.getExistenciaActual()).isEqualTo(40);
-        verify(stockAjustador, never()).actualizarStockConReintento(any(), anyInt(), anyInt());
+        verify(stockAjustador, never()).ajustarStock(any(), anyInt());
     }
 
     @Test
@@ -101,7 +101,7 @@ class MovimientoInventarioServiceTest {
                 service.registrarAjuste(new AjusteRequestDTO(3L, 5, "Conteo fisico"), 1L);
 
         assertThat(lote.getExistenciaActual()).isEqualTo(45);
-        verify(stockAjustador).actualizarStockConReintento(eq(7L), eq(5), anyInt());
+        verify(stockAjustador).ajustarStock(eq(7L), eq(5));
         assertThat(resultado.tipoMovimiento()).isEqualTo(TipoMovimiento.ENTRADA);
     }
 
@@ -114,7 +114,7 @@ class MovimientoInventarioServiceTest {
                 service.registrarAjuste(new AjusteRequestDTO(3L, -15, "Conteo fisico"), 1L);
 
         assertThat(lote.getExistenciaActual()).isEqualTo(25);
-        verify(stockAjustador).actualizarStockConReintento(eq(7L), eq(-15), anyInt());
+        verify(stockAjustador).ajustarStock(eq(7L), eq(-15));
         assertThat(resultado.tipoMovimiento()).isEqualTo(TipoMovimiento.SALIDA);
     }
 
@@ -148,7 +148,7 @@ class MovimientoInventarioServiceTest {
         // seguian contando en Producto.stockActual para siempre.
         assertThat(lote.isActivo()).isFalse();
         assertThat(lote.getExistenciaActual()).isZero();
-        verify(stockAjustador).actualizarStockConReintento(eq(7L), eq(-40), anyInt());
+        verify(stockAjustador).ajustarStock(eq(7L), eq(-40));
 
         ArgumentCaptor<dev.eduardo.artemedica.farmacia.model.MovimientoInventario> captor =
                 ArgumentCaptor.forClass(dev.eduardo.artemedica.farmacia.model.MovimientoInventario.class);
@@ -167,7 +167,7 @@ class MovimientoInventarioServiceTest {
         service.darDeBajaLote(3L, "Agotado y caducado", 1L);
 
         assertThat(lote.isActivo()).isFalse();
-        verify(stockAjustador, never()).actualizarStockConReintento(any(), anyInt(), anyInt());
+        verify(stockAjustador, never()).ajustarStock(any(), anyInt());
     }
 
     @Test

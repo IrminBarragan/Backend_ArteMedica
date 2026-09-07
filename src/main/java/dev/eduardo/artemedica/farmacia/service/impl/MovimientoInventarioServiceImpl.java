@@ -26,7 +26,6 @@ import java.util.List;
 @Service
 public class MovimientoInventarioServiceImpl implements MovimientoInventarioService {
 
-    private static final int MAX_INTENTOS_STOCK = 3;
 
     private final MovimientoInventarioRepository movimientoRepository;
     private final LoteRepository loteRepository;
@@ -153,7 +152,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         loteRepository.save(lote);
 
         Producto producto = lote.getProducto();
-        stockAjustador.actualizarStockConReintento(producto.getId(), -cantidad, MAX_INTENTOS_STOCK);
+        stockAjustador.ajustarStock(producto.getId(), -cantidad);
 
         return toDto(guardarMovimiento(lote, producto, usuario, tipo, cantidad, motivo, ahora));
     }
@@ -166,7 +165,7 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
         loteRepository.save(lote);
 
         Producto producto = lote.getProducto();
-        stockAjustador.actualizarStockConReintento(producto.getId(), cantidad, MAX_INTENTOS_STOCK);
+        stockAjustador.ajustarStock(producto.getId(), cantidad);
 
         return toDto(guardarMovimiento(lote, producto, usuario, TipoMovimiento.ENTRADA, cantidad, motivo, ahora));
     }
