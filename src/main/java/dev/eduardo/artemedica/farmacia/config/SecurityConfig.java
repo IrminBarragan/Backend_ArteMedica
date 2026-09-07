@@ -1,6 +1,8 @@
 package dev.eduardo.artemedica.farmacia.config;
 
 import dev.eduardo.artemedica.farmacia.security.JwtAuthenticationFilter;
+import dev.eduardo.artemedica.farmacia.security.RestAccessDeniedHandler;
+import dev.eduardo.artemedica.farmacia.security.RestAuthenticationEntryPoint;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,12 +28,18 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    private final RestAccessDeniedHandler restAccessDeniedHandler;
 
     @Value("${app.cors.allowed-origins}")
     private List<String> allowedOrigins;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          RestAuthenticationEntryPoint restAuthenticationEntryPoint,
+                          RestAccessDeniedHandler restAccessDeniedHandler) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
+        this.restAccessDeniedHandler = restAccessDeniedHandler;
     }
 
     @Bean
@@ -70,6 +78,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(restAuthenticationEntryPoint)
+                        .accessDeniedHandler(restAccessDeniedHandler)
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
