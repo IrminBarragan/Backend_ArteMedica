@@ -136,6 +136,43 @@ class SolicitudServiceTest {
     }
 
     @Nested
+    @DisplayName("Consultar por id")
+    class ConsultarPorId {
+
+        @BeforeEach
+        void mockearConsulta() {
+            lenient().when(solicitudRepository.findById(5L)).thenReturn(Optional.of(solicitud));
+            lenient().when(solicitudDetalleRepository.findBySolicitudId(5L)).thenReturn(List.of(detalle));
+        }
+
+        @Test
+        @DisplayName("el medico dueno consulta su propia solicitud")
+        void duenoConsultaLaSuya() {
+            var resultado = service.obtenerPorId(5L, MEDICO_DUENO, false);
+
+            assertThat(resultado.id()).isEqualTo(5L);
+            assertThat(resultado.medicoNombre()).isEqualTo("Laura Mendoza");
+        }
+
+        @Test
+        @DisplayName("un medico NO puede consultar la solicitud de otro medico por su id")
+        void medicoAjenoNoConsulta() {
+            // El listado ya filtraba por dueno; el hueco estaba en la consulta directa por id,
+            // donde bastaba con ir probando identificadores para leer solicitudes ajenas.
+            assertThatThrownBy(() -> service.obtenerPorId(5L, OTRO_MEDICO, false))
+                    .isInstanceOf(AccessDeniedException.class);
+        }
+
+        @Test
+        @DisplayName("un ADMIN o FARMACEUTICO si puede consultar cualquier solicitud")
+        void farmaceuticoConsultaAjena() {
+            var resultado = service.obtenerPorId(5L, FARMACEUTICO, true);
+
+            assertThat(resultado.id()).isEqualTo(5L);
+        }
+    }
+
+    @Nested
     @DisplayName("Aprobar")
     class Aprobar {
 

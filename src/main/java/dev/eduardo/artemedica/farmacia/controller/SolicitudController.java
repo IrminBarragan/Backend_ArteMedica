@@ -86,8 +86,11 @@ public class SolicitudController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SolicitudResponseDTO> obtenerPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(solicitudService.obtenerPorId(id));
+    public ResponseEntity<SolicitudResponseDTO> obtenerPorId(@PathVariable Long id,
+                                                               @AuthenticationPrincipal UsuarioPrincipal principal) {
+        boolean puedeVerAjenas = principal.getRol() != Rol.MEDICO;
+        return ResponseEntity.ok(
+                solicitudService.obtenerPorId(id, principal.getEmpleadoId(), puedeVerAjenas));
     }
 
     @GetMapping

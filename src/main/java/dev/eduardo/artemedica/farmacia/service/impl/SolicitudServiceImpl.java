@@ -342,9 +342,16 @@ public class SolicitudServiceImpl implements SolicitudService {
 
     @Override
     @Transactional(readOnly = true)
-    public SolicitudResponseDTO obtenerPorId(Long id) {
+    public SolicitudResponseDTO obtenerPorId(Long id, Long empleadoId, boolean puedeVerAjenas) {
         Solicitud solicitud = solicitudRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Solicitud no encontrada: " + id));
+
+        // El listado ya filtraba por medico, pero la consulta directa por id no comprobaba nada:
+        // bastaba con ir probando identificadores para leer que medicamentos pidio otro medico.
+        if (!puedeVerAjenas && !solicitud.getMedico().getId().equals(empleadoId)) {
+            throw new AccessDeniedException("No puedes consultar una solicitud que no creaste.");
+        }
+
         List<SolicitudDetalle> detalles = solicitudDetalleRepository.findBySolicitudId(id);
         return toDto(solicitud, detalles);
     }

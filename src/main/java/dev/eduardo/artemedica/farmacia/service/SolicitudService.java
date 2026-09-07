@@ -20,7 +20,11 @@ public interface SolicitudService {
      */
     SolicitudResponseDTO cancelar(Long solicitudId, String motivo, Long empleadoId, boolean puedeCancelarAjenas);
 
-    SolicitudResponseDTO obtenerPorId(Long id);
+    /**
+     * @param puedeVerAjenas true para ADMIN y FARMACEUTICO; un MEDICO solo puede consultar
+     *                       las solicitudes que el mismo creo.
+     */
+    SolicitudResponseDTO obtenerPorId(Long id, Long empleadoId, boolean puedeVerAjenas);
 
     // medicoId no nulo restringe el resultado a las solicitudes de ese medico
     List<SolicitudResponseDTO> listar(EstatusSolicitud estatus, Long medicoId);
