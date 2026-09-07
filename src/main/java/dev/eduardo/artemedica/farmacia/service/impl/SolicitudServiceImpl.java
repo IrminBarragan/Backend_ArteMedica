@@ -1,5 +1,6 @@
 package dev.eduardo.artemedica.farmacia.service.impl;
 
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudDetalleRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudDetalleResponseDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudRequestDTO;
@@ -47,6 +48,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.function.Supplier;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 
 @Service
@@ -364,21 +367,29 @@ public class SolicitudServiceImpl implements SolicitudService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SolicitudResponseDTO> listar(EstatusSolicitud estatus, Long medicoId) {
-        List<Solicitud> solicitudes;
+    public PaginaDTO<SolicitudResponseDTO> listar(EstatusSolicitud estatus, Long medicoId, Pageable pageable) {
+        Page<Solicitud> pagina;
         if (estatus != null && medicoId != null) {
-            solicitudes = solicitudRepository.findByEstatusAndMedicoId(estatus, medicoId);
+            pagina = solicitudRepository.buscarPorEstatusYMedico(estatus, medicoId, pageable);
         } else if (estatus != null) {
-            solicitudes = solicitudRepository.findByEstatus(estatus);
+            pagina = solicitudRepository.buscarPorEstatus(estatus, pageable);
         } else if (medicoId != null) {
-            solicitudes = solicitudRepository.findByMedicoId(medicoId);
+            pagina = solicitudRepository.buscarPorMedico(medicoId, pageable);
         } else {
-            solicitudes = solicitudRepository.findAll();
+            pagina = solicitudRepository.buscarTodas(pageable);
         }
 
-        return solicitudes.stream()
-                .map(solicitud -> toDto(solicitud, solicitudDetalleRepository.findBySolicitudId(solicitud.getId())))
-                .toList();
+        // Los detalles de toda la pagina se traen en una sola consulta y se agrupan en memoria.
+        // Pedirlos solicitud por solicitud era el N+1 que hacia crecer el costo con el tamano
+        // de la pagina en lugar de mantenerlo constante.
+        List<Long> ids = pagina.getContent().stream().map(Solicitud::getId).toList();
+        Map<Long, List<SolicitudDetalle>> detallesPorSolicitud = ids.isEmpty()
+                ? Map.of()
+                : solicitudDetalleRepository.findBySolicitudIdIn(ids).stream()
+                        .collect(Collectors.groupingBy(d -> d.getSolicitud().getId()));
+
+        return PaginaDTO.de(pagina,
+                solicitud -> toDto(solicitud, detallesPorSolicitud.getOrDefault(solicitud.getId(), List.of())));
     }
 
     private boolean estaCompleto(SolicitudDetalle detalle) {

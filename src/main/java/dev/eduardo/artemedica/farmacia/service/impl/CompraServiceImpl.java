@@ -3,6 +3,7 @@ package dev.eduardo.artemedica.farmacia.service.impl;
 import dev.eduardo.artemedica.farmacia.dto.CompraDetalleRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.CompraDetalleResponseDTO;
 import dev.eduardo.artemedica.farmacia.dto.CompraRequestDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.dto.CompraResponseDTO;
 import dev.eduardo.artemedica.farmacia.exception.ReglaNegocioException;
 import dev.eduardo.artemedica.farmacia.exception.ResourceNotFoundException;
@@ -24,6 +25,8 @@ import dev.eduardo.artemedica.farmacia.repository.ProveedorRepository;
 import dev.eduardo.artemedica.farmacia.repository.UsuarioRepository;
 import dev.eduardo.artemedica.farmacia.service.CompraService;
 import dev.eduardo.artemedica.farmacia.service.support.StockAjustador;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +35,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class CompraServiceImpl implements CompraService {
@@ -165,21 +170,33 @@ public class CompraServiceImpl implements CompraService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CompraResponseDTO> listar(Long proveedorId, LocalDate desde, LocalDate hasta) {
-        List<Compra> compras;
+    public PaginaDTO<CompraResponseDTO> listar(Long proveedorId, LocalDate desde, LocalDate hasta,
+                                                Pageable pageable) {
+        Page<Compra> pagina;
         if (proveedorId != null) {
-            compras = compraRepository.findByProveedorId(proveedorId);
+            pagina = compraRepository.buscarPorProveedor(proveedorId, pageable);
         } else if (desde != null && hasta != null) {
-            compras = compraRepository.findByFechaCompraBetween(desde, hasta);
+            pagina = compraRepository.buscarPorRangoDeFechas(desde, hasta, pageable);
         } else {
-            compras = compraRepository.findAll();
+            pagina = compraRepository.buscarTodas(pageable);
         }
-        return compras.stream().map(this::toDto).toList();
+
+        // Una sola consulta para los detalles de toda la pagina, en vez de una por compra.
+        List<Long> ids = pagina.getContent().stream().map(Compra::getId).toList();
+        Map<Long, List<CompraDetalle>> detallesPorCompra = ids.isEmpty()
+                ? Map.of()
+                : compraDetalleRepository.findByCompraIdIn(ids).stream()
+                        .collect(Collectors.groupingBy(d -> d.getCompra().getId()));
+
+        return PaginaDTO.de(pagina,
+                compra -> toDto(compra, detallesPorCompra.getOrDefault(compra.getId(), List.of())));
     }
 
     private CompraResponseDTO toDto(Compra compra) {
-        List<CompraDetalle> detalles = compraDetalleRepository.findByCompraId(compra.getId());
+        return toDto(compra, compraDetalleRepository.findByCompraId(compra.getId()));
+    }
 
+    private CompraResponseDTO toDto(Compra compra, List<CompraDetalle> detalles) {
         BigDecimal total = BigDecimal.ZERO;
         List<CompraDetalleResponseDTO> detallesDto = new ArrayList<>();
         for (CompraDetalle detalle : detalles) {

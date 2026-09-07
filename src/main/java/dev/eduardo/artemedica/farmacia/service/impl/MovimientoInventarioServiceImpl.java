@@ -3,6 +3,7 @@ package dev.eduardo.artemedica.farmacia.service.impl;
 import dev.eduardo.artemedica.farmacia.dto.AjusteRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.MermaRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.MovimientoInventarioResponseDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.exception.ReglaNegocioException;
 import dev.eduardo.artemedica.farmacia.exception.ResourceNotFoundException;
 import dev.eduardo.artemedica.farmacia.exception.StockInsuficienteException;
@@ -17,6 +18,7 @@ import dev.eduardo.artemedica.farmacia.repository.MovimientoInventarioRepository
 import dev.eduardo.artemedica.farmacia.repository.UsuarioRepository;
 import dev.eduardo.artemedica.farmacia.service.MovimientoInventarioService;
 import dev.eduardo.artemedica.farmacia.service.support.StockAjustador;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,29 +50,27 @@ public class MovimientoInventarioServiceImpl implements MovimientoInventarioServ
 
     @Override
     @Transactional(readOnly = true)
-    public List<MovimientoInventarioResponseDTO> listarPorProducto(Long productoId) {
-        return movimientoRepository.findByProductoIdOrderByFechaMovimientoDesc(productoId)
-                .stream().map(this::toDto).toList();
+    public PaginaDTO<MovimientoInventarioResponseDTO> listarPorProducto(Long productoId, Pageable pageable) {
+        return PaginaDTO.de(movimientoRepository.buscarPorProducto(productoId, pageable), this::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<MovimientoInventarioResponseDTO> listarPorLote(Long loteId) {
-        return movimientoRepository.findByLoteIdOrderByFechaMovimientoDesc(loteId)
-                .stream().map(this::toDto).toList();
+    public PaginaDTO<MovimientoInventarioResponseDTO> listarPorLote(Long loteId, Pageable pageable) {
+        return PaginaDTO.de(movimientoRepository.buscarPorLote(loteId, pageable), this::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<MovimientoInventarioResponseDTO> listarRecientes() {
-        return movimientoRepository.findTop5ByOrderByFechaMovimientoDesc()
+        return movimientoRepository.buscarRecientes()
                 .stream().map(this::toDto).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<MovimientoInventarioResponseDTO> listarPorOrigen(OrigenMovimiento origenTipo, Long origenId) {
-        return movimientoRepository.findByOrigenTipoAndOrigenId(origenTipo, origenId)
+        return movimientoRepository.buscarPorOrigen(origenTipo, origenId)
                 .stream().map(this::toDto).toList();
     }
 

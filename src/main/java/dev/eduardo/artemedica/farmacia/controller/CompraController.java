@@ -2,10 +2,14 @@ package dev.eduardo.artemedica.farmacia.controller;
 
 import dev.eduardo.artemedica.farmacia.dto.CompraRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.CompraResponseDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.security.UsuarioPrincipal;
 import dev.eduardo.artemedica.farmacia.service.CompraService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -45,10 +49,11 @@ public class CompraController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CompraResponseDTO>> listar(
+    public ResponseEntity<PaginaDTO<CompraResponseDTO>> listar(
             @RequestParam(required = false) Long proveedorId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
-        return ResponseEntity.ok(compraService.listar(proveedorId, desde, hasta));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+            @PageableDefault(size = 20, sort = "fechaCompra", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(compraService.listar(proveedorId, desde, hasta, pageable));
     }
 }

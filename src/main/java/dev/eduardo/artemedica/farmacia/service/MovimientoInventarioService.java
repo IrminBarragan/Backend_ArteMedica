@@ -5,6 +5,9 @@ import dev.eduardo.artemedica.farmacia.dto.MermaRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.MovimientoInventarioResponseDTO;
 import dev.eduardo.artemedica.farmacia.model.enums.OrigenMovimiento;
 
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 
 /**
@@ -13,9 +16,9 @@ import java.util.List;
  */
 public interface MovimientoInventarioService {
 
-    List<MovimientoInventarioResponseDTO> listarPorProducto(Long productoId);
+    PaginaDTO<MovimientoInventarioResponseDTO> listarPorProducto(Long productoId, Pageable pageable);
 
-    List<MovimientoInventarioResponseDTO> listarPorLote(Long loteId);
+    PaginaDTO<MovimientoInventarioResponseDTO> listarPorLote(Long loteId, Pageable pageable);
 
     List<MovimientoInventarioResponseDTO> listarRecientes();
 

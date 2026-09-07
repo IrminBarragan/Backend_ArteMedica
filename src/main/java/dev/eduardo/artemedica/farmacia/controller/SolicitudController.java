@@ -2,6 +2,7 @@ package dev.eduardo.artemedica.farmacia.controller;
 
 import dev.eduardo.artemedica.farmacia.dto.AprobarSolicitudRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.CancelarSolicitudRequestDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.dto.RechazarSolicitudRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudResponseDTO;
@@ -10,6 +11,9 @@ import dev.eduardo.artemedica.farmacia.model.enums.Rol;
 import dev.eduardo.artemedica.farmacia.security.UsuarioPrincipal;
 import dev.eduardo.artemedica.farmacia.service.SolicitudService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -94,9 +98,11 @@ public class SolicitudController {
     }
 
     @GetMapping
-    public ResponseEntity<List<SolicitudResponseDTO>> listar(@RequestParam(required = false) EstatusSolicitud estatus,
-                                                               @AuthenticationPrincipal UsuarioPrincipal principal) {
+    public ResponseEntity<PaginaDTO<SolicitudResponseDTO>> listar(
+            @RequestParam(required = false) EstatusSolicitud estatus,
+            @PageableDefault(size = 20, sort = "fechaSolicitud", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal UsuarioPrincipal principal) {
         Long medicoId = principal.getRol() == Rol.MEDICO ? principal.getEmpleadoId() : null;
-        return ResponseEntity.ok(solicitudService.listar(estatus, medicoId));
+        return ResponseEntity.ok(solicitudService.listar(estatus, medicoId, pageable));
     }
 }

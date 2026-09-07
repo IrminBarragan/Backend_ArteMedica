@@ -3,10 +3,13 @@ package dev.eduardo.artemedica.farmacia.controller;
 import dev.eduardo.artemedica.farmacia.dto.AjusteRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.MermaRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.MovimientoInventarioResponseDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.model.enums.OrigenMovimiento;
 import dev.eduardo.artemedica.farmacia.security.UsuarioPrincipal;
 import dev.eduardo.artemedica.farmacia.service.MovimientoInventarioService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -36,13 +39,17 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping("/producto/{productoId}")
-    public ResponseEntity<List<MovimientoInventarioResponseDTO>> listarPorProducto(@PathVariable Long productoId) {
-        return ResponseEntity.ok(movimientoInventarioService.listarPorProducto(productoId));
+    public ResponseEntity<PaginaDTO<MovimientoInventarioResponseDTO>> listarPorProducto(
+            @PathVariable Long productoId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(movimientoInventarioService.listarPorProducto(productoId, pageable));
     }
 
     @GetMapping("/lote/{loteId}")
-    public ResponseEntity<List<MovimientoInventarioResponseDTO>> listarPorLote(@PathVariable Long loteId) {
-        return ResponseEntity.ok(movimientoInventarioService.listarPorLote(loteId));
+    public ResponseEntity<PaginaDTO<MovimientoInventarioResponseDTO>> listarPorLote(
+            @PathVariable Long loteId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(movimientoInventarioService.listarPorLote(loteId, pageable));
     }
 
     @GetMapping("/recientes")

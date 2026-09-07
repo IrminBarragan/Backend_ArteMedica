@@ -4,7 +4,9 @@ import dev.eduardo.artemedica.farmacia.dto.SolicitudRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.SolicitudResponseDTO;
 import dev.eduardo.artemedica.farmacia.model.enums.EstatusSolicitud;
 
-import java.util.List;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
+import org.springframework.data.domain.Pageable;
+
 import java.util.Map;
 
 public interface SolicitudService {
@@ -27,5 +29,5 @@ public interface SolicitudService {
     SolicitudResponseDTO obtenerPorId(Long id, Long empleadoId, boolean puedeVerAjenas);
 
     // medicoId no nulo restringe el resultado a las solicitudes de ese medico
-    List<SolicitudResponseDTO> listar(EstatusSolicitud estatus, Long medicoId);
+    PaginaDTO<SolicitudResponseDTO> listar(EstatusSolicitud estatus, Long medicoId, Pageable pageable);
 }
