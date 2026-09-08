@@ -9,6 +9,7 @@ import dev.eduardo.artemedica.farmacia.security.UsuarioPrincipal;
 import dev.eduardo.artemedica.farmacia.service.MovimientoInventarioService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,8 +21,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /**
  * Kardex de inventario: consulta del historico de movimientos y registro de los
@@ -53,16 +52,18 @@ public class MovimientoInventarioController {
     }
 
     @GetMapping("/recientes")
-    public ResponseEntity<List<MovimientoInventarioResponseDTO>> listarRecientes() {
-        return ResponseEntity.ok(movimientoInventarioService.listarRecientes());
+    public ResponseEntity<PaginaDTO<MovimientoInventarioResponseDTO>> listarRecientes(
+            @PageableDefault(size = 5, sort = "fechaMovimiento", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(movimientoInventarioService.listarRecientes(pageable));
     }
 
     /** Trazabilidad inversa: todos los movimientos que genero una compra o una solicitud. */
     @GetMapping("/origen")
-    public ResponseEntity<List<MovimientoInventarioResponseDTO>> listarPorOrigen(
+    public ResponseEntity<PaginaDTO<MovimientoInventarioResponseDTO>> listarPorOrigen(
             @RequestParam OrigenMovimiento origenTipo,
-            @RequestParam Long origenId) {
-        return ResponseEntity.ok(movimientoInventarioService.listarPorOrigen(origenTipo, origenId));
+            @RequestParam Long origenId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(movimientoInventarioService.listarPorOrigen(origenTipo, origenId, pageable));
     }
 
     @PostMapping("/merma")

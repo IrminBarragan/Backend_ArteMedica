@@ -24,6 +24,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -232,11 +234,12 @@ class CatalogosServiceTest {
         @Test
         @DisplayName("el listado de stock bajo delega en la consulta que compara contra el minimo")
         void stockBajo() {
-            when(productoRepository.findProductosStockBajo()).thenReturn(List.of(
+            PageRequest pageable = PageRequest.of(0, 20);
+            when(productoRepository.findProductosStockBajo(pageable)).thenReturn(new PageImpl<>(List.of(
                     Producto.builder().id(1L).nombre("Paracetamol").categoria(categoria)
-                            .stockActual(5).stockMinimo(50).activo(true).build()));
+                            .stockActual(5).stockMinimo(50).activo(true).build())));
 
-            assertThat(service.listarStockBajo()).hasSize(1);
+            assertThat(service.listarStockBajo(pageable).contenido()).hasSize(1);
         }
     }
 }

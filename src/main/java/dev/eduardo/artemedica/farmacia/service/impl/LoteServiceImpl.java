@@ -1,16 +1,17 @@
 package dev.eduardo.artemedica.farmacia.service.impl;
 
 import dev.eduardo.artemedica.farmacia.dto.LoteResponseDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.exception.ResourceNotFoundException;
 import dev.eduardo.artemedica.farmacia.model.Lote;
 import dev.eduardo.artemedica.farmacia.repository.LoteRepository;
 import dev.eduardo.artemedica.farmacia.service.LoteService;
 import dev.eduardo.artemedica.farmacia.service.MovimientoInventarioService;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Service
 public class LoteServiceImpl implements LoteService {
@@ -32,26 +33,26 @@ public class LoteServiceImpl implements LoteService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<LoteResponseDTO> listarActivos() {
-        return loteRepository.findByActivoTrue().stream().map(this::toDto).toList();
+    public PaginaDTO<LoteResponseDTO> listarActivos(Pageable pageable) {
+        return PaginaDTO.de(loteRepository.findByActivoTrue(pageable), this::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<LoteResponseDTO> listarPorProducto(Long productoId) {
-        return loteRepository.findByProductoIdAndActivoTrue(productoId).stream().map(this::toDto).toList();
+    public PaginaDTO<LoteResponseDTO> listarPorProducto(Long productoId, Pageable pageable) {
+        return PaginaDTO.de(loteRepository.findByProductoIdAndActivoTrue(productoId, pageable), this::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<LoteResponseDTO> listarVencidos() {
-        return loteRepository.findLotesVencidos().stream().map(this::toDto).toList();
+    public PaginaDTO<LoteResponseDTO> listarVencidos(Pageable pageable) {
+        return PaginaDTO.de(loteRepository.findLotesVencidos(pageable), this::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<LoteResponseDTO> listarPorVencer(LocalDate fechaLimite) {
-        return loteRepository.findLotesPorVencer(fechaLimite).stream().map(this::toDto).toList();
+    public PaginaDTO<LoteResponseDTO> listarPorVencer(LocalDate fechaLimite, Pageable pageable) {
+        return PaginaDTO.de(loteRepository.findLotesPorVencer(fechaLimite, pageable), this::toDto);
     }
 
     @Override

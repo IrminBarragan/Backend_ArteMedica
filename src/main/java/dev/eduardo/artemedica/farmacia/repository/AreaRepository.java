@@ -1,10 +1,10 @@
 package dev.eduardo.artemedica.farmacia.repository;
 
 import dev.eduardo.artemedica.farmacia.model.Area;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.List;
-
 public interface AreaRepository extends JpaRepository<Area, Long> {
-    List<Area> findByActivoTrue();
+    Page<Area> findByActivoTrue(Pageable pageable);
 }

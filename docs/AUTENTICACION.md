@@ -28,12 +28,14 @@ No requiere autenticación previa (es el único endpoint público de la API).
 
 | Campo | Tipo | Descripción |
 |---|---|---|
-| `token` | string | El JWT. Se manda en cada request subsecuente. |
+| `token` | string | El JWT (access token). Se manda en cada request subsecuente. |
 | `tipo` | string | Siempre el literal `"Bearer"`. |
 | `username` | string | El username del usuario autenticado. |
 | `rol` | string (enum `Rol`) | `ADMIN`, `MEDICO` o `FARMACEUTICO`. |
 | `empleadoId` | number | Id del `Empleado` ligado a este usuario (no el id del `Usuario`). |
-| `expiresIn` | number | Milisegundos de vida del token desde que se emitió. |
+| `expiresIn` | number | Milisegundos de vida del access token desde que se emitió. |
+| `refreshToken` | string | Token opaco (no es JWT) para renovar el access token sin volver a pedir usuario/contraseña. Guárdalo aparte del access token. |
+| `refreshExpiresIn` | number | Milisegundos de vida del refresh token desde que se emitió. |
 
 ```json
 {
@@ -42,7 +44,9 @@ No requiere autenticación previa (es el único endpoint público de la API).
   "username": "cmendoza",
   "rol": "FARMACEUTICO",
   "empleadoId": 3,
-  "expiresIn": 86400000
+  "expiresIn": 1800000,
+  "refreshToken": "kQ2f1z9m3X...(cadena aleatoria opaca, no la interpretes como JWT)",
+  "refreshExpiresIn": 604800000
 }
 ```
 
@@ -52,17 +56,48 @@ No requiere autenticación previa (es el único endpoint público de la API).
 
 ## Cómo usar el token
 
-En cada request a un endpoint protegido (todos excepto `POST /api/auth/login`), manda el token en el header `Authorization`:
+En cada request a un endpoint protegido (todos excepto `POST /api/auth/login`, `/api/auth/refresh` y `/api/auth/logout`), manda el access token en el header `Authorization`:
 
 ```
 Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjbWVuZG96YSIs...
 ```
 
-No hay refresh token ni endpoint de logout — el cliente simplemente descarta el token y vuelve a hacer login cuando expira.
+## Renovar el access token — `POST /api/auth/refresh`
 
-## Expiración del token
+No requiere autenticación previa (el access token ya expiró, por eso se está pidiendo uno nuevo).
 
-El tiempo de vida real, leído de `application.properties` (`app.jwt.expiration-ms`), es de **86 400 000 ms = 24 horas** por defecto. Es configurable con la variable de entorno `JWT_EXPIRATION_MS`; el valor real vigente siempre viene en el campo `expiresIn` de la respuesta de login, así que el frontend no debería asumir un número fijo — debe leerlo de ahí.
+**Request body — `RefreshRequestDTO`:**
+
+| Campo | Tipo | Requerido |
+|---|---|---|
+| `refreshToken` | string | Sí |
+
+**Response `200 OK` — `RefreshResponseDTO`:** misma forma que el login (`token`, `tipo`, `expiresIn`, `refreshToken`, `refreshExpiresIn`) menos `username`/`rol`/`empleadoId`.
+
+Importante: el refresh token se **rota** en cada uso — la respuesta trae uno nuevo y el que se mandó queda revocado. El frontend debe reemplazar el que tenía guardado por el nuevo en cada llamada a `/refresh`, nunca reutilizar el anterior.
+
+**Errores posibles:**
+- `401` — el refresh token no existe, ya expiró, o ya fue usado antes (rotado). En este último caso, por seguridad se revocan **todas** las sesiones activas de ese usuario (es la señal típica de que alguien más tiene una copia del token), así que el usuario tiene que volver a hacer login.
+
+## Cerrar sesión — `POST /api/auth/logout`
+
+No requiere autenticación previa. Revoca el refresh token recibido; el access token en curso sigue siendo válido hasta que expire por sí solo (no hay forma de invalidar un JWT ya firmado antes de su expiración, por eso su vida es corta).
+
+**Request body — `LogoutRequestDTO`:**
+
+| Campo | Tipo | Requerido |
+|---|---|---|
+| `refreshToken` | string | Sí |
+
+**Response:** `204 No Content`. No falla aunque el token ya no exista o ya estuviera revocado — hacer logout dos veces es seguro.
+
+## Expiración de los tokens
+
+El access token, leído de `application.properties` (`app.jwt.expiration-ms`), dura **1 800 000 ms = 30 minutos** por defecto (variable de entorno `JWT_EXPIRATION_MS`). Es corto a propósito: como no se puede revocar antes de expirar, cuanto más corto menor la ventana de uso si se filtra.
+
+El refresh token (`app.refresh.expiration-ms`, variable `REFRESH_EXPIRATION_MS`) dura **604 800 000 ms = 7 días** por defecto — es lo que evita que el usuario tenga que volver a hacer login cada 30 minutos. A diferencia del access token, si se filtra sí se puede revocar (`/api/auth/logout`), porque vive hasheado en la tabla `refresh_token` y no es un JWT autocontenido.
+
+El valor real vigente de ambos siempre viene en `expiresIn`/`refreshExpiresIn` de la respuesta; el frontend no debería asumir un número fijo.
 
 El secreto de firma (`app.jwt.secret` / variable de entorno `JWT_SECRET`) tiene un valor de desarrollo por defecto inseguro; en producción debe configurarse por variable de entorno.
 

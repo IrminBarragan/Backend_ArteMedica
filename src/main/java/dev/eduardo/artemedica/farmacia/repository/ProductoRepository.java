@@ -1,20 +1,21 @@
 package dev.eduardo.artemedica.farmacia.repository;
 
 import dev.eduardo.artemedica.farmacia.model.Producto;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
 import java.util.Optional;
 
 public interface ProductoRepository extends JpaRepository<Producto, Long> {
-    List<Producto> findByActivoTrue();
+    Page<Producto> findByActivoTrue(Pageable pageable);
     Optional<Producto> findByCodigoBarras(String codigoBarras);
 
     @Query("SELECT p FROM Producto p WHERE p.activo = true AND p.stockActual <= p.stockMinimo")
-    List<Producto> findProductosStockBajo();
+    Page<Producto> findProductosStockBajo(Pageable pageable);
 
     /**
      * Suma delta al contador de stock en una sola sentencia atomica, sin leerlo antes.

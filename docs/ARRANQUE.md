@@ -95,3 +95,12 @@ Así, al dispensar una solicitud de Paracetamol, el lote consumido cambia según
 Antes de desplegar fuera de tu máquina, define `JWT_SECRET` y `SEED_ADMIN_PASSWORD`, y pon
 `SEED_DEMO_ENABLED=false`. El seeder emite una advertencia en el log si detecta que sigues usando
 las credenciales de desarrollo.
+
+## Verificar que la API está viva
+
+`GET /actuator/health` es público (sin token) y responde `{"status":"UP"}` si la aplicación y la
+conexión a la base de datos están bien. Es el endpoint que debe apuntar un healthcheck de Docker
+o una sonda de liveness/readiness de Kubernetes.
+
+`GET /actuator/info` requiere estar autenticado como `ADMIN` — muestra versión y fecha de build
+del artefacto (via el goal `build-info` de Maven), no está pensado para consultarse desde fuera.

@@ -1,13 +1,8 @@
 package dev.eduardo.artemedica.farmacia.dto;
 
-import dev.eduardo.artemedica.farmacia.model.enums.Rol;
-
-public record LoginResponseDTO(
+public record RefreshResponseDTO(
         String token,
         String tipo,
-        String username,
-        Rol rol,
-        Long empleadoId,
         long expiresIn,
         String refreshToken,
         long refreshExpiresIn

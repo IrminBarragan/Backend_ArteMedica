@@ -3,6 +3,8 @@ package dev.eduardo.artemedica.farmacia.repository;
 import dev.eduardo.artemedica.farmacia.model.Lote;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -17,14 +19,16 @@ public interface LoteRepository extends JpaRepository<Lote, Long> {
 
     // Lectura normal, sin bloqueo, para consultas (ej. mostrar disponibilidad en pantalla)
     List<Lote> findByProductoIdAndActivoTrueAndExistenciaActualGreaterThan(Long productoId, Integer cantidad);
-    List<Lote> findByActivoTrue();
-    List<Lote> findByProductoIdAndActivoTrue(Long productoId);
+    Page<Lote> findByActivoTrue(Pageable pageable);
+    Page<Lote> findByProductoIdAndActivoTrue(Long productoId, Pageable pageable);
 
-    @Query("SELECT l FROM Lote l WHERE l.activo = true AND l.existenciaActual > 0 AND l.fechaCaducidad < CURRENT_DATE")
-    List<Lote> findLotesVencidos();
+    @Query(value = "SELECT l FROM Lote l WHERE l.activo = true AND l.existenciaActual > 0 AND l.fechaCaducidad < CURRENT_DATE",
+           countQuery = "SELECT COUNT(l) FROM Lote l WHERE l.activo = true AND l.existenciaActual > 0 AND l.fechaCaducidad < CURRENT_DATE")
+    Page<Lote> findLotesVencidos(Pageable pageable);
 
-    @Query("SELECT l FROM Lote l WHERE l.activo = true AND l.existenciaActual > 0 AND l.fechaCaducidad BETWEEN CURRENT_DATE AND :fechaLimite")
-    List<Lote> findLotesPorVencer(@Param("fechaLimite") LocalDate fechaLimite);
+    @Query(value = "SELECT l FROM Lote l WHERE l.activo = true AND l.existenciaActual > 0 AND l.fechaCaducidad BETWEEN CURRENT_DATE AND :fechaLimite",
+           countQuery = "SELECT COUNT(l) FROM Lote l WHERE l.activo = true AND l.existenciaActual > 0 AND l.fechaCaducidad BETWEEN CURRENT_DATE AND :fechaLimite")
+    Page<Lote> findLotesPorVencer(@Param("fechaLimite") LocalDate fechaLimite, Pageable pageable);
 
     // --- Con bloqueo pesimista, para usarse SIEMPRE dentro de una transaccion en el Service ---
 

@@ -1,9 +1,12 @@
 package dev.eduardo.artemedica.farmacia.controller;
 
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.dto.UsuarioRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.UsuarioResponseDTO;
 import dev.eduardo.artemedica.farmacia.service.UsuarioService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -47,8 +49,9 @@ public class UsuarioController {
     }
 
     @GetMapping
-    public ResponseEntity<List<UsuarioResponseDTO>> listarActivos() {
-        return ResponseEntity.ok(usuarioService.listarActivos());
+    public ResponseEntity<PaginaDTO<UsuarioResponseDTO>> listarActivos(
+            @PageableDefault(size = 20, sort = "username") Pageable pageable) {
+        return ResponseEntity.ok(usuarioService.listarActivos(pageable));
     }
 
     @DeleteMapping("/{id}")

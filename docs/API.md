@@ -1,8 +1,8 @@
 # Paginación
 
-Tres endpoints devuelven páginas en lugar de una lista completa, porque sus colecciones crecen
-sin cota: `GET /api/solicitudes`, `GET /api/compras` y los listados del kardex
-(`GET /api/movimientos/producto/{id}` y `/lote/{id}`).
+**Todos** los endpoints de listado (`GET` sin `{id}`) devuelven páginas, incluidos los catálogos
+chicos (áreas, categorías, proveedores, empleados, usuarios, productos, códigos equivalentes,
+lotes): es el mismo contrato en toda la API, no hay que recordar cuáles paginan y cuáles no.
 
 Aceptan los parámetros `page` (base 0), `size` y `sort`, y devuelven este envoltorio:
 
@@ -18,12 +18,15 @@ Aceptan los parámetros `page` (base 0), `size` y `sort`, y devuelven este envol
 }
 ```
 
-Por defecto son 20 elementos, ordenados por fecha descendente. Los filtros ya existentes
-(`estatus`, `proveedorId`, `desde`, `hasta`) siguen funcionando y se combinan con la paginación.
+Por defecto son 20 elementos por página (5 en `GET /api/movimientos/recientes`, pensado como
+widget de dashboard), cada endpoint trae su propio orden por defecto razonable (ej. `nombre` en
+catálogos, `fechaCaducidad` en lotes, `fechaMovimiento` descendente en el kardex) — se puede
+sobreescribir con `?sort=campo,asc` o `?sort=campo,desc`. Los filtros ya existentes (`estatus`,
+`proveedorId`, `desde`, `hasta`) siguen funcionando y se combinan con la paginación.
 
-Los catálogos (áreas, categorías, proveedores, empleados, usuarios, productos, lotes) siguen
-devolviendo una lista simple: son colecciones acotadas que el frontend necesita completas para
-llenar selectores.
+Si un catálogo tiene pocas filas (ej. `Area`, que rara vez pasa de una docena), un `size` grande
+(`?size=200`) trae todo en una sola página — útil para llenar un selector del frontend sin tener
+que iterar páginas.
 
 # API — Catálogo de endpoints
 
@@ -59,13 +62,33 @@ Ejemplo de response:
   "username": "cmendoza",
   "rol": "FARMACEUTICO",
   "empleadoId": 3,
-  "expiresIn": 86400000
+  "expiresIn": 1800000,
+  "refreshToken": "kQ2f1z9m3X... (opaco, no es JWT)",
+  "refreshExpiresIn": 604800000
 }
 ```
 
 Posibles errores:
 - 400 si el body no pasa las validaciones
 - 401 si el usuario no existe, está inactivo, o la contraseña no coincide
+
+### POST /api/auth/refresh
+Rol requerido: ninguno (público)
+Descripción: renueva el access token usando el refresh token. **Rota** el refresh token: el que se manda queda revocado y la respuesta trae uno nuevo que hay que guardar en su lugar. Detalle completo en [AUTENTICACION.md](./AUTENTICACION.md).
+
+Request body: `RefreshRequestDTO`
+Response (200): `RefreshResponseDTO`
+
+Posibles errores:
+- 400 si `refreshToken` viene vacío
+- 401 si el refresh token no existe, expiró, o ya fue usado antes (reuso de un token rotado — revoca todas las sesiones del usuario por seguridad)
+
+### POST /api/auth/logout
+Rol requerido: ninguno (público)
+Descripción: revoca el refresh token recibido. El access token en curso sigue siendo válido hasta que expire por sí solo.
+
+Request body: `LogoutRequestDTO`
+Response (204): sin body. No falla si el token ya no existe o ya estaba revocado.
 
 ---
 
@@ -131,9 +154,9 @@ Posibles errores:
 
 ### GET /api/empleados
 Rol requerido: cualquier autenticado
-Descripción: lista los empleados activos.
+Descripción: lista los empleados activos, paginado (ver [sección Paginación](#paginación)). Orden por defecto: `apellidoPaterno` ascendente.
 
-Response (200): `EmpleadoResponseDTO[]`
+Response (200): `PaginaDTO<EmpleadoResponseDTO>`
 
 ### DELETE /api/empleados/{id}
 Rol requerido: ADMIN
@@ -188,9 +211,9 @@ Posibles errores:
 
 ### GET /api/usuarios
 Rol requerido: ADMIN
-Descripción: lista usuarios activos.
+Descripción: lista usuarios activos, paginado (ver [sección Paginación](#paginación)). Orden por defecto: `username` ascendente.
 
-Response (200): `UsuarioResponseDTO[]`
+Response (200): `PaginaDTO<UsuarioResponseDTO>`
 
 Posibles errores:
 - 403 si no es ADMIN
@@ -245,8 +268,8 @@ Posibles errores:
 
 ### GET /api/areas
 Rol requerido: cualquier autenticado
-Descripción: lista áreas activas.
-Response (200): `AreaResponseDTO[]`
+Descripción: lista áreas activas, paginado (ver [sección Paginación](#paginación)). Orden por defecto: `nombre` ascendente.
+Response (200): `PaginaDTO<AreaResponseDTO>`
 
 ### DELETE /api/areas/{id}
 Rol requerido: ADMIN
@@ -291,7 +314,8 @@ Posibles errores:
 
 ### GET /api/categorias
 Rol requerido: cualquier autenticado
-Response (200): `CategoriaMedicamentoResponseDTO[]`
+Descripción: paginado (ver [sección Paginación](#paginación)). Orden por defecto: `nombre` ascendente.
+Response (200): `PaginaDTO<CategoriaMedicamentoResponseDTO>`
 
 ### DELETE /api/categorias/{id}
 Rol requerido: ADMIN
@@ -341,7 +365,8 @@ Posibles errores:
 
 ### GET /api/proveedores
 Rol requerido: cualquier autenticado
-Response (200): `ProveedorResponseDTO[]`
+Descripción: paginado (ver [sección Paginación](#paginación)). Orden por defecto: `nombre` ascendente.
+Response (200): `PaginaDTO<ProveedorResponseDTO>`
 
 ### DELETE /api/proveedores/{id}
 Rol requerido: ADMIN o FARMACEUTICO
@@ -415,13 +440,13 @@ Posibles errores:
 
 ### GET /api/productos
 Rol requerido: cualquier autenticado (incluye MEDICO, que lo necesita para armar sus solicitudes)
-Descripción: lista productos activos.
-Response (200): `ProductoResponseDTO[]`
+Descripción: lista productos activos, paginado (ver [sección Paginación](#paginación)). Orden por defecto: `nombre` ascendente.
+Response (200): `PaginaDTO<ProductoResponseDTO>`
 
 ### GET /api/productos/stock-bajo
 Rol requerido: cualquier autenticado
-Descripción: lista los productos activos donde `stockActual <= stockMinimo`.
-Response (200): `ProductoResponseDTO[]`
+Descripción: lista los productos activos donde `stockActual <= stockMinimo`, paginado. Orden por defecto: `stockActual` ascendente (el más crítico primero).
+Response (200): `PaginaDTO<ProductoResponseDTO>`
 
 ### DELETE /api/productos/{id}
 Rol requerido: ADMIN o FARMACEUTICO
@@ -466,8 +491,8 @@ Posibles errores:
 
 ### GET /api/codigos-equivalentes/producto/{productoId}
 Rol requerido: ADMIN o FARMACEUTICO
-Descripción: lista los códigos equivalentes de un producto.
-Response (200): `CodigoEquivalenteResponseDTO[]`
+Descripción: lista los códigos equivalentes de un producto, paginado (ver [sección Paginación](#paginación)).
+Response (200): `PaginaDTO<CodigoEquivalenteResponseDTO>`
 
 ### DELETE /api/codigos-equivalentes/{id}
 Rol requerido: ADMIN o FARMACEUTICO
@@ -480,38 +505,50 @@ Posibles errores:
 
 ## Lotes
 
-Este Controller es **solo lectura** — no hay `POST`/`PUT`/`DELETE`. Los lotes solo se generan implícitamente al registrar una compra (ver sección Compras). Todos los endpoints están abiertos a cualquier autenticado.
+Este Controller es **solo lectura** — no hay `POST`/`PUT`/`DELETE`. Los lotes solo se generan implícitamente al registrar una compra (ver sección Compras). Todos los endpoints están abiertos a cualquier autenticado, paginados (ver [sección Paginación](#paginación)) con orden por defecto `fechaCaducidad` ascendente (el que caduca antes, primero).
+
+### GET /api/lotes
+Descripción: lista todos los lotes activos, de cualquier producto.
+Response (200): `PaginaDTO<LoteResponseDTO>`
+
+```json
+{
+  "contenido": [
+    {
+      "id": 101,
+      "numeroLote": "LOT-2026-0817",
+      "productoId": 12,
+      "productoNombre": "Paracetamol",
+      "proveedorId": 1,
+      "proveedorNombre": "Distribuidora Farmacéutica del Bajío S.A. de C.V.",
+      "fechaCaducidad": "2027-06-30",
+      "costoCompra": 28.00,
+      "cantidadInicial": 200,
+      "existenciaActual": 173,
+      "activo": true
+    }
+  ],
+  "pagina": 0,
+  "tamano": 20,
+  "totalElementos": 1,
+  "totalPaginas": 1,
+  "primera": true,
+  "ultima": true
+}
+```
 
 ### GET /api/lotes/producto/{productoId}
 Descripción: lista los lotes activos de un producto (todos, sin filtrar por existencia ni vigencia).
-Response (200): `LoteResponseDTO[]`
-
-```json
-[
-  {
-    "id": 101,
-    "numeroLote": "LOT-2026-0817",
-    "productoId": 12,
-    "productoNombre": "Paracetamol",
-    "proveedorId": 1,
-    "proveedorNombre": "Distribuidora Farmacéutica del Bajío S.A. de C.V.",
-    "fechaCaducidad": "2027-06-30",
-    "costoCompra": 28.00,
-    "cantidadInicial": 200,
-    "existenciaActual": 173,
-    "activo": true
-  }
-]
-```
+Response (200): `PaginaDTO<LoteResponseDTO>`
 
 ### GET /api/lotes/vencidos
 Descripción: lista lotes activos con `existenciaActual > 0` cuya `fechaCaducidad` ya pasó.
-Response (200): `LoteResponseDTO[]`
+Response (200): `PaginaDTO<LoteResponseDTO>`
 
 ### GET /api/lotes/por-vencer?fechaLimite=2026-09-30
 Descripción: lista lotes activos con `existenciaActual > 0` cuya `fechaCaducidad` está entre hoy y `fechaLimite`.
 Query param: `fechaLimite` (fecha `YYYY-MM-DD`, **requerido**, sin valor por defecto).
-Response (200): `LoteResponseDTO[]`
+Response (200): `PaginaDTO<LoteResponseDTO>`
 
 Posibles errores:
 - 400 si falta `fechaLimite` o no tiene formato de fecha válido. Nota: este caso particular (parámetro de query faltante/mal formado) no tiene un `@ExceptionHandler` dedicado en `GlobalExceptionHandler` — no se verificó en pruebas reales si efectivamente cae en 400 o en el manejador genérico (500); si el frontend depende de esto, confírmalo contra el ambiente real antes de asumirlo.

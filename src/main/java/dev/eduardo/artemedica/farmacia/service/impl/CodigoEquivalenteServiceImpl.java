@@ -2,17 +2,18 @@ package dev.eduardo.artemedica.farmacia.service.impl;
 
 import dev.eduardo.artemedica.farmacia.dto.CodigoEquivalenteRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.CodigoEquivalenteResponseDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.exception.ResourceNotFoundException;
 import dev.eduardo.artemedica.farmacia.model.CodigoEquivalente;
 import dev.eduardo.artemedica.farmacia.model.Producto;
 import dev.eduardo.artemedica.farmacia.repository.CodigoEquivalenteRepository;
 import dev.eduardo.artemedica.farmacia.repository.ProductoRepository;
 import dev.eduardo.artemedica.farmacia.service.CodigoEquivalenteService;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class CodigoEquivalenteServiceImpl implements CodigoEquivalenteService {
@@ -49,8 +50,8 @@ public class CodigoEquivalenteServiceImpl implements CodigoEquivalenteService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CodigoEquivalenteResponseDTO> listarPorProducto(Long productoId) {
-        return codigoEquivalenteRepository.findByProductoId(productoId).stream().map(this::toDto).toList();
+    public PaginaDTO<CodigoEquivalenteResponseDTO> listarPorProducto(Long productoId, Pageable pageable) {
+        return PaginaDTO.de(codigoEquivalenteRepository.findByProductoId(productoId, pageable), this::toDto);
     }
 
     @Override

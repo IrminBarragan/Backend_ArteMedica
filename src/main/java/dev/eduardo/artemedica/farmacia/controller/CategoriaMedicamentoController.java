@@ -2,8 +2,11 @@ package dev.eduardo.artemedica.farmacia.controller;
 
 import dev.eduardo.artemedica.farmacia.dto.CategoriaMedicamentoRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.CategoriaMedicamentoResponseDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.service.CategoriaMedicamentoService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/categorias")
@@ -48,8 +50,9 @@ public class CategoriaMedicamentoController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CategoriaMedicamentoResponseDTO>> listarActivos() {
-        return ResponseEntity.ok(categoriaMedicamentoService.listarActivos());
+    public ResponseEntity<PaginaDTO<CategoriaMedicamentoResponseDTO>> listarActivos(
+            @PageableDefault(size = 20, sort = "nombre") Pageable pageable) {
+        return ResponseEntity.ok(categoriaMedicamentoService.listarActivos(pageable));
     }
 
     @DeleteMapping("/{id}")

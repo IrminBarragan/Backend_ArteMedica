@@ -2,14 +2,14 @@ package dev.eduardo.artemedica.farmacia.service.impl;
 
 import dev.eduardo.artemedica.farmacia.dto.EmpleadoRequestDTO;
 import dev.eduardo.artemedica.farmacia.dto.EmpleadoResponseDTO;
+import dev.eduardo.artemedica.farmacia.dto.PaginaDTO;
 import dev.eduardo.artemedica.farmacia.exception.ResourceNotFoundException;
 import dev.eduardo.artemedica.farmacia.model.Empleado;
 import dev.eduardo.artemedica.farmacia.repository.EmpleadoRepository;
 import dev.eduardo.artemedica.farmacia.service.EmpleadoService;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 public class EmpleadoServiceImpl implements EmpleadoService {
@@ -58,8 +58,8 @@ public class EmpleadoServiceImpl implements EmpleadoService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<EmpleadoResponseDTO> listarActivos() {
-        return empleadoRepository.findByActivoTrue().stream().map(this::toDto).toList();
+    public PaginaDTO<EmpleadoResponseDTO> listarActivos(Pageable pageable) {
+        return PaginaDTO.de(empleadoRepository.findByActivoTrue(pageable), this::toDto);
     }
 
     @Override
